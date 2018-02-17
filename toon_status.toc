@@ -1,0 +1,9 @@
+## Interface: 70300
+## Title: Toon Status
+## Notes: Keep track of interesting levels to guide your play time
+## Author: Kamishan
+## Version: 0.1
+## SavedVariables: ToonStatus
+toon_status.lua
+toon_status.xml
+
