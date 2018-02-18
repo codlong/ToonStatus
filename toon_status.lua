@@ -50,7 +50,7 @@ messageFrame:SetTextColor(1, 1, 1, 1) -- default color
 messageFrame:SetJustifyH("LEFT")
 messageFrame:SetHyperlinksEnabled(true)
 messageFrame:SetFading(false)
-messageFrame:SetMaxLines(300)
+messageFrame:SetMaxLines(500)
 frame.messageFrame = messageFrame
 
 -------------------------------------------------------------------------------
@@ -82,6 +82,7 @@ frame:SetScript("OnMouseWheel", function(self, delta)
 		scrollBar:SetValue(cur_val)
 	end
 end)
+
 frame:Hide()
  
 function OnEvent(self, event, arg1, ...)
@@ -92,8 +93,8 @@ function OnEvent(self, event, arg1, ...)
       ShowStatusMessage()
     elseif (event == "PLAYER_ENTERING_WORLD") then
       SavePlayerData()
-    --elseif (event == "PLAYER_LEAVING_WORLD") then 
-    --  SavePlayerData()
+    elseif (event == "PLAYER_LEAVING_WORLD") then 
+      ToonStatus = _toonStatus
     end
 end
 frame:RegisterEvent("ADDON_LOADED")
@@ -110,9 +111,17 @@ SlashCmdList["TOON_STATUS"] = function(msg)
 		ToonStatusFrame:Hide()
   else
     SavePlayerData()
+
+    local players = {}
+    for k in pairs(_toonStatus) do
+      table.insert(players, k) 
+    end
+    table.sort(players)
+
     messageFrame:Clear()
-    for k, v in pairs(_toonStatus) do
-      messageFrame:AddMessage(CharacterStatusString(v))
+    for i, player in ipairs(players) do
+      TS_ChatMessage(player)
+      messageFrame:AddMessage(CharacterStatusString(_toonStatus[player]))
     end
 		ToonStatusFrame:Show()
 	end  
@@ -130,24 +139,7 @@ function SavePlayerData()
 end
 
 function ShowStatusMessage()
-  if _debug then TS_ChatMessage("ShowStatusMessage") end
-  local data = _toonStatus[UnitName("player")]
-  if (data) then
-    if (data.copper) then
-      TS_ChatMessage(GetCoinText(data.copper))
-    end
-    if (data.artifact_name) then
-      TS_ChatMessage(("Artifact %s Level %d"):format(data.artifact_name, data.artifact_level))
-    end
-    if (data.order_resources and data.veiled_argunite) then 
-      TS_ChatMessage(("%d resources %d veiled argunite"):format(data.order_resources, data.veiled_argunite))
-    end
-    if (data.ilvl) then
-      TS_ChatMessage("iLevel " .. data.ilvl)
-    end
-  else
-    TS_ChatMessage("Sorry, no data!")
-  end
+  TS_ChatMessage("Type /ts to see the status of your toons")
 end
 
 function CharacterStatusString(data)
