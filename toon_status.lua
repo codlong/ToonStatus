@@ -1,5 +1,4 @@
 local name, addon = ...
-local _toonStatus
 local _debug = false
 
 local frame  = CreateFrame("Frame", "ToonStatusFrame", UIParent)
@@ -88,18 +87,13 @@ frame:Hide()
 function OnEvent(self, event, arg1, ...)
     if _debug then TS_ChatMessage(event) end
     if (event == "ADDON_LOADED" and name == arg1) then
-      -- Grab value of the saved variable
-      _toonStatus = ToonStatus
       ShowStatusMessage()
     elseif (event == "PLAYER_ENTERING_WORLD") then
       SavePlayerData()
-    elseif (event == "PLAYER_LEAVING_WORLD") then 
-      ToonStatus = _toonStatus
     end
 end
 frame:RegisterEvent("ADDON_LOADED")
 frame:RegisterEvent("PLAYER_ENTERING_WORLD")
-frame:RegisterEvent("PLAYER_LEAVING_WORLD")
 frame:SetScript("OnEvent", OnEvent)
 
 --
@@ -118,9 +112,10 @@ SlashCmdList["TOON_STATUS"] = function(cmd)
       end,
       OnShow = function (self, data)
         self.editBox:SetMultiLine()
-        self.editBox:Insert("player,copper,artifact_name,artifact_level,order_resources,veiled_argunite,ilvl\n")
-        for player, player_data in pairs(_toonStatus) do
-          self.editBox:Insert(CharacterStatusCSVString(player_data).."\n")
+        local now = time()
+        self.editBox:Insert("player,copper,artifact_name,artifact_level,order_resources,veiled_argunite,ilvl,timestamp\n")
+        for player, player_data in pairs(ToonStatus) do
+          self.editBox:Insert(("%s,%d\n"):format(CharacterStatusCSVString(player_data), now))
         end
         self.editBox:HighlightText()
       end,
@@ -138,7 +133,7 @@ SlashCmdList["TOON_STATUS"] = function(cmd)
       SavePlayerData()
 
       local players = {}
-      for k in pairs(_toonStatus) do
+      for k in pairs(ToonStatus) do
         table.insert(players, k) 
       end
       table.sort(players)
@@ -146,7 +141,7 @@ SlashCmdList["TOON_STATUS"] = function(cmd)
       messageFrame:Clear()
       for i, player in ipairs(players) do
         TS_ChatMessage(player)
-        messageFrame:AddMessage(CharacterStatusString(_toonStatus[player]))
+        messageFrame:AddMessage(CharacterStatusString(ToonStatus[player]))
       end
       ToonStatusFrame:Show()
     end  
@@ -155,12 +150,11 @@ end
 
 function SavePlayerData()
   if _debug then TS_ChatMessage("SavePlayerData") end
-  if (not _toonStatus) then
-    _toonStatus = {}
+  if (not ToonStatus) then
+    ToonStatus = {}
   end
   data = GetPlayerData()
-  _toonStatus[data.player_name] = data
-  ToonStatus = _toonStatus
+  ToonStatus[data.player_name] = data
   return data.player_name
 end
 
@@ -183,7 +177,7 @@ end
 
 function CharacterStatusCSVString(data)
   if _debug then TS_ChatMessage("CharacterStatusString") end
-  return ("%s,%s,%s,%d,%d,%d,%d"):format(
+  return ("%s,%s,\"%s\",%d,%d,%d,%d"):format(
     nvl(data.player_name, "UNKNOWN"), 
     nvl(data.copper, 0), 
     nvl(data.artifact_name, "NO ARTIFACT"),
