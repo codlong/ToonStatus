@@ -163,7 +163,6 @@ end
 
 function CharacterStatusString(data)
   if _debug then TS_ChatMessage("CharacterStatusString") end
-  --format("%-10s is a kid with him they get %8.2f\n",names[nkids],eachGets)
   return ("%s %.2fg %s level %d resources %d argunite %d ilvl %d\n"):format(
     nvl(data.player_name, "UNKNOWN"), 
     nvl(data.copper, 0)/10000, 
