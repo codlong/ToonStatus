@@ -2,7 +2,7 @@ local name, addon = ...
 local _debug = false
 
 local frame  = CreateFrame("Frame", "ToonStatusFrame", UIParent)
-frame.width  = 500
+frame.width  = 750
 frame.height = 250
 frame:SetFrameStrata("FULLSCREEN_DIALOG")
 frame:SetSize(frame.width, frame.height)
@@ -140,7 +140,6 @@ SlashCmdList["TOON_STATUS"] = function(cmd)
 
       messageFrame:Clear()
       for i, player in ipairs(players) do
-        TS_ChatMessage(player)
         messageFrame:AddMessage(CharacterStatusString(ToonStatus[player]))
       end
       ToonStatusFrame:Show()
@@ -164,9 +163,10 @@ end
 
 function CharacterStatusString(data)
   if _debug then TS_ChatMessage("CharacterStatusString") end
-  return ("%s\n%s\nArtifact %s Level %d\nOrder Resources %d\nVeiled Argunite %d\niLevel %d\n\n"):format(
+  --format("%-10s is a kid with him they get %8.2f\n",names[nkids],eachGets)
+  return ("%s %.2fg %s level %d resources %d argunite %d ilvl %d\n"):format(
     nvl(data.player_name, "UNKNOWN"), 
-    GetCoinText(nvl(data.copper, 0)), 
+    nvl(data.copper, 0)/10000, 
     nvl(data.artifact_name, "NO ARTIFACT"),
     nvl(data.artifact_level, 0),
     nvl(data.order_resources, 0),
