@@ -112,10 +112,10 @@ SlashCmdList["TOON_STATUS"] = function(cmd)
       end,
       OnShow = function (self, data)
         self.editBox:SetMultiLine()
-        local now = time()
+        local now = date("%m/%d/%y %H:%M:%S",time())
         self.editBox:Insert("player,copper,artifact_name,artifact_level,order_resources,veiled_argunite,ilvl,timestamp\n")
         for player, player_data in pairs(ToonStatus) do
-          self.editBox:Insert(("%s,%d\n"):format(CharacterStatusCSVString(player_data), now))
+          self.editBox:Insert(("%s,%s\n"):format(CharacterStatusCSVString(player_data), now))
         end
         self.editBox:HighlightText()
       end,
