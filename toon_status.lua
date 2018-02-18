@@ -106,25 +106,51 @@ frame:SetScript("OnEvent", OnEvent)
 -- Slash command
 --
 SLASH_TOON_STATUS1 = "/ts"
-SlashCmdList["TOON_STATUS"] = function(msg)
-  if ToonStatusFrame:IsShown() then
-		ToonStatusFrame:Hide()
-  else
+SlashCmdList["TOON_STATUS"] = function(cmd)
+  if (cmd == "csv") then
     SavePlayerData()
 
-    local players = {}
-    for k in pairs(_toonStatus) do
-      table.insert(players, k) 
-    end
-    table.sort(players)
+    StaticPopupDialogs["TOON_STATUS_CSV"] = {
+      text="Copy CSV output",
+      button1 = CANCEL,
+      OnCancel = function()
+        StaticPopup_Hide ("TOON_STATUS_CSV")
+      end,
+      OnShow = function (self, data)
+        self.editBox:SetMultiLine()
+        self.editBox:Insert("player,copper,artifact_name,artifact_level,order_resources,veiled_argunite,ilvl\n")
+        for player, player_data in pairs(_toonStatus) do
+          self.editBox:Insert(CharacterStatusCSVString(player_data).."\n")
+        end
+        self.editBox:HighlightText()
+      end,
+      timeout = 0,
+      whileDead = true,
+      hideOnEscape = true,
+      hasEditBox = true,
+      preferredIndex = 3,  -- avoid some UI taint, see http://www.wowace.com/announcements/how-to-avoid-some-ui-taint/
+    }
+    StaticPopup_Show ("TOON_STATUS_CSV")
+  else
+    if ToonStatusFrame:IsShown() then
+      ToonStatusFrame:Hide()
+    else
+      SavePlayerData()
 
-    messageFrame:Clear()
-    for i, player in ipairs(players) do
-      TS_ChatMessage(player)
-      messageFrame:AddMessage(CharacterStatusString(_toonStatus[player]))
-    end
-		ToonStatusFrame:Show()
-	end  
+      local players = {}
+      for k in pairs(_toonStatus) do
+        table.insert(players, k) 
+      end
+      table.sort(players)
+
+      messageFrame:Clear()
+      for i, player in ipairs(players) do
+        TS_ChatMessage(player)
+        messageFrame:AddMessage(CharacterStatusString(_toonStatus[player]))
+      end
+      ToonStatusFrame:Show()
+    end  
+  end
 end
 
 function SavePlayerData()
@@ -147,6 +173,19 @@ function CharacterStatusString(data)
   return ("%s\n%s\nArtifact %s Level %d\nOrder Resources %d\nVeiled Argunite %d\niLevel %d\n\n"):format(
     nvl(data.player_name, "UNKNOWN"), 
     GetCoinText(nvl(data.copper, 0)), 
+    nvl(data.artifact_name, "NO ARTIFACT"),
+    nvl(data.artifact_level, 0),
+    nvl(data.order_resources, 0),
+    nvl(data.veiled_argunite, 0),
+    nvl(data.ilvl, 0)
+  )
+end
+
+function CharacterStatusCSVString(data)
+  if _debug then TS_ChatMessage("CharacterStatusString") end
+  return ("%s,%s,%s,%d,%d,%d,%d"):format(
+    nvl(data.player_name, "UNKNOWN"), 
+    nvl(data.copper, 0), 
     nvl(data.artifact_name, "NO ARTIFACT"),
     nvl(data.artifact_level, 0),
     nvl(data.order_resources, 0),
