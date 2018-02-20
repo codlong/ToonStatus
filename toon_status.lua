@@ -169,7 +169,7 @@ function ShowPlayerDataCSV()
       local now = date("%m/%d/%y %H:%M:%S",time())
       self.editBox:Insert("player,player_level,copper,artifact_name,artifact_level,order_resources,veiled_argunite,ilvl,timestamp\n")
       for i, player in ipairs(ToonStatusActivePlayers) do
-        self.editBox:Insert(("%s,%s\n"):format(CharacterStatusCSVString(ToonStatus[player], now)))
+        self.editBox:Insert(("%s,%s\n"):format(CharacterStatusCSVString(ToonStatus[player]), now))
       end
       self.editBox:HighlightText()
     end,
@@ -202,7 +202,6 @@ function SavePlayerData()
   if _debug then TS_ChatMessage("SavePlayerData") end
   if (not ToonStatus) then
     ToonStatus = {}
-    ToonStatus.active_players = {}
   end
   local data = GetPlayerData()
   ToonStatus[data.player_name] = data
