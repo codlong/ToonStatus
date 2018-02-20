@@ -1,6 +1,15 @@
 local addon_name, addon = ...
 local _debug = false
 
+local knownResources = {
+  "level",
+  "gold",
+  "artifact",
+  "resources",
+  "argunite",
+  "ilvl"
+}
+
 local frame  = CreateFrame("Frame", "ToonStatusFrame", UIParent)
 frame.width  = 750
 frame.height = 250
@@ -8,12 +17,12 @@ frame:SetFrameStrata("FULLSCREEN_DIALOG")
 frame:SetSize(frame.width, frame.height)
 frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
 frame:SetBackdrop({
-	bgFile   = "Interface\\DialogFrame\\UI-DialogBox-Background",
-	edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
-	tile     = true,
-	tileSize = 32,
-	edgeSize = 32,
-	insets   = { left = 8, right = 8, top = 8, bottom = 8 }
+  bgFile   = "Interface\\DialogFrame\\UI-DialogBox-Background",
+  edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+  tile     = true,
+  tileSize = 32,
+  edgeSize = 32,
+  insets   = { left = 8, right = 8, top = 8, bottom = 8 }
 })
 frame:SetBackdropColor(0, 0, 0, 1)
 frame:EnableMouse(true)
@@ -36,7 +45,7 @@ closeButton:SetHeight(25)
 closeButton:SetWidth(70)
 closeButton:SetText(CLOSE)
 closeButton:SetScript("OnClick", function(self)
-	HideParentPanel(self)
+  HideParentPanel(self)
 end)
 frame.closeButton = closeButton
 
@@ -67,26 +76,26 @@ scrollBar.scrollStep = 1
 frame.scrollBar = scrollBar
 
 scrollBar:SetScript("OnValueChanged", function(self, value)
-	messageFrame:SetScrollOffset(select(2, scrollBar:GetMinMaxValues()) - value)
+  messageFrame:SetScrollOffset(select(2, scrollBar:GetMinMaxValues()) - value)
 end)
 
 scrollBar:SetValue(select(2, scrollBar:GetMinMaxValues()))
 
 frame:SetScript("OnMouseWheel", function(self, delta)
-	local cur_val = scrollBar:GetValue()
-	local min_val, max_val = scrollBar:GetMinMaxValues()
+  local cur_val = scrollBar:GetValue()
+  local min_val, max_val = scrollBar:GetMinMaxValues()
 
-	if delta < 0 and cur_val < max_val then
-		cur_val = math.min(max_val, cur_val + 1)
-		scrollBar:SetValue(cur_val)
-	elseif delta > 0 and cur_val > min_val then
-		cur_val = math.max(min_val, cur_val - 1)
-		scrollBar:SetValue(cur_val)
-	end
+  if delta < 0 and cur_val < max_val then
+    cur_val = math.min(max_val, cur_val + 1)
+    scrollBar:SetValue(cur_val)
+  elseif delta > 0 and cur_val > min_val then
+    cur_val = math.max(min_val, cur_val - 1)
+    scrollBar:SetValue(cur_val)
+  end
 end)
 
 frame:Hide()
- 
+
 function OnEvent(self, event, arg1, ...)
     if _debug then TS_ChatMessage(event) end
     if (event == "ADDON_LOADED" and addon_name == arg1) then
@@ -119,6 +128,8 @@ SlashCmdList["TOON_STATUS"] = function(msg)
     ShowPlayerDataCSV()
   elseif (cmd == "toon") then
     AddRemoveToons(args)
+  elseif (cmd == "stat") then
+    ShowResourceValue(args)
   elseif (not cmd) then
     TogglePlayerDataWindow()
   else
@@ -157,6 +168,31 @@ function AddRemoveToons(args)
   TS_ChatMessage(toons)
 end
 
+function ShowResourceValue(args)
+  local requestedResources = {}
+  for arg in string.gmatch(args, "%S+") do
+      if IsKnownResource(arg) then
+          table.insert(requestedResources, arg)
+      else
+          TS_ChatMessage("Unknown resource "..arg)
+      end
+  end
+  ShowPlayerDataWindow(requestedResources)
+end
+
+function IsKnownResource(r)
+  return IsInList(r, knownResources)
+end
+
+function IsInList(item, list)
+  for i, j in ipairs(list) do
+      if (item == j) then
+          return true
+      end 
+  end
+  return false
+end
+
 function ShowPlayerDataCSV()
   StaticPopupDialogs["TOON_STATUS_CSV"] = {
     text="Copy CSV output",
@@ -186,17 +222,21 @@ function TogglePlayerDataWindow()
   if ToonStatusFrame:IsShown() then
     ToonStatusFrame:Hide()
   else
-    SavePlayerData()
-
-    table.sort(ToonStatusActivePlayers)
-
-    messageFrame:Clear()
-    for i, player in ipairs(ToonStatusActivePlayers) do
-      messageFrame:AddMessage(CharacterStatusString(ToonStatus[player]))
-    end
-    ToonStatusFrame:Show()
+    ShowPlayerDataWindow(knownResources)
   end  
 end
+
+function ShowPlayerDataWindow(requestedResources)
+  SavePlayerData()
+  table.sort(ToonStatusActivePlayers)
+
+  messageFrame:Clear()
+  for i, player in ipairs(ToonStatusActivePlayers) do
+    messageFrame:AddMessage(CharacterStatusString(ToonStatus[player], requestedResources))
+  end
+  ToonStatusFrame:Show()
+end
+
 
 function SavePlayerData()
   if _debug then TS_ChatMessage("SavePlayerData") end
@@ -212,21 +252,37 @@ function ShowStatusMessage()
   TS_ChatMessage("Type /ts to see the status of your toons")
 end
 
-function CharacterStatusString(data)
+function CharacterStatusString(data, resources)
   if _debug then TS_ChatMessage("CharacterStatusString") end
+  if (not resources) then
+      resources = knownResources
+  end
+
   local ret = nil
+
   if (data) then
-    --"%-12s %3d %10.1fg  %-35s %2d %9d %7d %7.0f"
-    ret = ("%s %d %.1fg %s level %d resources %d argunite %d ilvl %d\n"):format(
-      nvl(data.player_name, "UNKNOWN"), 
-      nvl(data.player_level, 0),
-      nvl(data.copper, 0)/10000, 
-      nvl(data.artifact_name, "NO ARTIFACT"),
-      nvl(data.artifact_level, 0),
-      nvl(data.order_resources, 0),
-      nvl(data.veiled_argunite, 0),
-      nvl(data.ilvl, 0)
-    )
+      ret = nvl(data.player_name, "UNKNOWN")
+      if (IsInList("level", resources)) then
+          ret = ret .. (" %d"):format(nvl(data.player_level, 0))
+      end
+      if (IsInList("gold", resources)) then
+          ret = ret .. (" %.1fg"):format(nvl(data.copper, 0)/10000)
+      end
+      if (IsInList("artifact", resources)) then
+          ret = ret .. (" %s level %d"):format(
+              nvl(data.artifact_name, "NO ARTIFACT"),
+              nvl(data.artifact_level, 0)
+          )
+      end
+      if (IsInList("resources", resources)) then
+          ret = ret .. (" resources %d"):format(nvl(data.order_resources, 0))
+      end
+      if (IsInList("argunite", resources)) then
+          ret = ret .. (" argunite %d"):format(nvl(data.veiled_argunite, 0))
+      end
+      if (IsInList("ilvl", resources)) then
+          ret = ret .. (" ilvl %.1f"):format(nvl(data.ilvl, 0))
+      end
   end
   return ret 
 end
