@@ -10,8 +10,16 @@ local knownResources = {
   "ilvl"
 }
 
+local toonEvents = {
+  "ADDON_LOADED",
+  "PLAYER_ENTERING_WORLD",
+  "PLAYER_MONEY",
+  "CURRENCY_DISPLAY_UPDATE",
+  "ARTIFACT_UPDATE"
+}
+
 local frame  = CreateFrame("Frame", "ToonStatusFrame", UIParent)
-frame.width  = 750
+frame.width  = 850
 frame.height = 250
 frame:SetFrameStrata("FULLSCREEN_DIALOG")
 frame:SetSize(frame.width, frame.height)
@@ -50,13 +58,13 @@ end)
 frame.closeButton = closeButton
 
 -- ScrollingMessageFrame
---local myfont = CreateFont("ToonStatusDialog")
---myfont:SetFont("Interface\\Addons\\toon_status\\FiraMono-Medium.ttf", 12)
+local myfont = CreateFont("ToonStatusDialog")
+myfont:SetFont("Interface\\Addons\\toon_status\\FiraMono-Medium.ttf", 12)
 
 local messageFrame = CreateFrame("ScrollingMessageFrame", nil, frame)
 messageFrame:SetPoint("CENTER", 15, 20)
 messageFrame:SetSize(frame.width, frame.height - 50)
-messageFrame:SetFontObject(GameFontNormal) 
+messageFrame:SetFontObject(myfont) --(GameFontNormal) 
 messageFrame:SetTextColor(1, 1, 1, 1) -- default color
 messageFrame:SetJustifyH("LEFT")
 messageFrame:SetHyperlinksEnabled(true)
@@ -98,22 +106,25 @@ frame:Hide()
 
 function OnEvent(self, event, arg1, ...)
     if _debug then TS_ChatMessage(event) end
-    if (event == "ADDON_LOADED" and addon_name == arg1) then
-      -- initialize active player list if it doesn't exist
-      if (not ToonStatusActivePlayers) then
-        ToonStatusActivePlayers = {}
-        for player, data in pairs(ToonStatus) do
-          table.insert(ToonStatusActivePlayers, player)
+    if (event == "ADDON_LOADED") then
+      if (addon_name == arg1) then
+        -- initialize active player list if it doesn't exist
+        if (not ToonStatusActivePlayers) then
+          ToonStatusActivePlayers = {}
+          for player, data in pairs(ToonStatus) do
+            table.insert(ToonStatusActivePlayers, player)
+          end
         end
+        ShowStatusMessage()
       end
-
-      ShowStatusMessage()
     elseif (event == "PLAYER_ENTERING_WORLD") then
       SavePlayerData()
-    end
 end
-frame:RegisterEvent("ADDON_LOADED")
-frame:RegisterEvent("PLAYER_ENTERING_WORLD")
+
+for i, eventName in ipairs(toonEvents) do
+  frame:RegisterEvent(eventName)
+end
+
 frame:SetScript("OnEvent", OnEvent)
 
 --
@@ -231,6 +242,7 @@ function ShowPlayerDataWindow(requestedResources)
   table.sort(ToonStatusActivePlayers)
 
   messageFrame:Clear()
+  messageFrame:AddMessage(("%18s %6s %12s %6s %s %s\n\n"):format("level", "gold", "resources", "argunite", "ilvl", "artifact"))
   for i, player in ipairs(ToonStatusActivePlayers) do
     messageFrame:AddMessage(CharacterStatusString(ToonStatus[player], requestedResources))
   end
@@ -261,28 +273,28 @@ function CharacterStatusString(data, resources)
   local ret = nil
 
   if (data) then
-      ret = nvl(data.player_name, "UNKNOWN")
+      ret = ("%-12s"):format(nvl(data.player_name, "UNKNOWN"))
       if (IsInList("level", resources)) then
-          ret = ret .. (" %d"):format(nvl(data.player_level, 0))
+          ret = ret .. (" %4d"):format(nvl(data.player_level, 0))
       end
       if (IsInList("gold", resources)) then
-          ret = ret .. (" %.1fg"):format(nvl(data.copper, 0)/10000)
-      end
-      if (IsInList("artifact", resources)) then
-          ret = ret .. (" %s level %d"):format(
-              nvl(data.artifact_name, "NO ARTIFACT"),
-              nvl(data.artifact_level, 0)
-          )
+          ret = ret .. (" %9.1fg"):format(nvl(data.copper, 0)/10000)
       end
       if (IsInList("resources", resources)) then
-          ret = ret .. (" resources %d"):format(nvl(data.order_resources, 0))
+          ret = ret .. (" %7d"):format(nvl(data.order_resources, 0))
       end
       if (IsInList("argunite", resources)) then
-          ret = ret .. (" argunite %d"):format(nvl(data.veiled_argunite, 0))
+          ret = ret .. (" %8d"):format(nvl(data.veiled_argunite, 0))
       end
       if (IsInList("ilvl", resources)) then
-          ret = ret .. (" ilvl %.1f"):format(nvl(data.ilvl, 0))
+          ret = ret .. ( " %7.1f"):format(nvl(data.ilvl, 0))
       end
+      if (IsInList("artifact", resources)) then
+        ret = ret .. ( " %s (%d)"):format(
+            nvl(data.artifact_name, "NO ARTIFACT"),
+            nvl(data.artifact_level, 0)
+        )
+    end
   end
   return ret 
 end
