@@ -119,6 +119,7 @@ function OnEvent(self, event, arg1, ...)
       end
     elseif (event == "PLAYER_ENTERING_WORLD") then
       SavePlayerData()
+    end
 end
 
 for i, eventName in ipairs(toonEvents) do
