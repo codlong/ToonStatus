@@ -148,15 +148,19 @@ end
 --
 -- Show the startup usage message to the user
 --
-local function ShowStatusMessage()
+local function ShowHelpMessage()
     TS_ChatMessage("/ts to see the status of your toons")
-    TS_ChatMessage("/ts toon [add remove] player1 ... playern to add/remove toons from display" )
+    TS_ChatMessage("/ts toon [add remove] Player (Player2 ...) to add/remove toons from display (names are case-sensitive)")
+    TS_ChatMessage("/ts csv to get data in comma-separated values format (just hit ctrl-c to copy to clipboard)")
     local msg = "/ts stat ["
     for i, stat in ipairs(knownResources) do
         msg = msg..stat.." "
     end
-    msg = msg.."] to filter stats"
+    msg = msg.."] to filter stats (does not persist)"
     TS_ChatMessage(msg)
+    TS_ChatMessage(
+        "/ts update to update current player data without displaying anything. Can be used in a macro with /logout to save before exit.")
+    TS_ChatMessage("/ts help to display this information")
 end
 
 --
@@ -233,7 +237,7 @@ local function OnEvent(self, event, arg1, ...)
                     table.insert(ToonStatusActivePlayers, player)
                 end
             end
-            ShowStatusMessage()
+            TS_ChatMessage("/ts help to see options")
         end
     elseif (event == "PLAYER_ENTERING_WORLD") then
         SavePlayerData()
@@ -268,24 +272,24 @@ end
 --
 local function ResourceHeaderString(resources)
     if (_debug) then TS_ChatMessage(resources) end
-    local ret = ("%-12s"):format("Toon")
     if (not resources) then
         resources = knownResources
     end
+    local ret = ("%-12s"):format("Toon")
     if (IsInList("level", resources)) then
-        ret = ret..("%-6s"):format("Level")
+        ret = ret..("%6s"):format("Level")
     end
     if (IsInList("gold", resources)) then
-        ret = ret..("%-11s"):format("   Gold")
+        ret = ret..("%9s"):format("Gold")
     end
     if (IsInList("resources", resources)) then
-        ret = ret..("%-10s"):format("Resources")
+        ret = ret..("%10s"):format("Resources")
     end
     if (IsInList("argunite", resources)) then
-        ret = ret..("%-9s"):format("Argunite")
+        ret = ret..("%9s"):format("Argunite")
     end
     if (IsInList("ilvl", resources)) then
-        ret = ret..("%-6s"):format(" ilvl")
+        ret = ret..("%6s"):format("iLvl")
     end
     if (IsInList("artifact", resources)) then
         ret = ret.." Artifact"
@@ -310,22 +314,19 @@ local function CharacterStatusString(data, resources)
             ret = ret .. ("%6d"):format(nvl(data.player_level, 0))
         end
         if (IsInList("gold", resources)) then
-            ret = ret .. ("%9.1fg"):format(nvl(data.copper, 0)/10000)
+            ret = ret .. ("%8.1fg"):format(nvl(data.copper, 0)/10000)
         end
         if (IsInList("resources", resources)) then
             ret = ret .. ("%10d"):format(nvl(data.order_resources, 0))
         end
         if (IsInList("argunite", resources)) then
-            ret = ret .. ("     %4d"):format(nvl(data.veiled_argunite, 0))
+            ret = ret .. ("%9d"):format(nvl(data.veiled_argunite, 0))
         end
         if (IsInList("ilvl", resources)) then
-            ret = ret .. (" %3.1f"):format(nvl(data.ilvl, 0))
+            ret = ret .. ("%6.1f"):format(nvl(data.ilvl, 0.0))
         end
-        if (IsInList("artifact", resources)) then
-        ret = ret .. ( " %s (%d)"):format(
-            nvl(data.artifact_name, "NO ARTIFACT"),
-            nvl(data.artifact_level, 0)
-        )
+        if (IsInList("artifact", resources) and data.artifact_name) then
+            ret = ret .. ( " %s (%d)"):format(data.artifact_name, nvl(data.artifact_level, 0))
         end
     end
     return ret 
@@ -425,7 +426,7 @@ local function AddRemoveToons(args)
             end
             table.insert(ToonStatusActivePlayers, arg)
         else
-            TS_ChatMessage(("Unknown toon command %s. Usage: /ts toon [add|remove] player (player ...)"):format(toon_cmd))
+            TS_ChatMessage(("Unknown toon command %s. Usage: /ts toon [add|remove] Player (Player2 ...)"):format(toon_cmd))
             break
         end
     end
@@ -449,6 +450,7 @@ end
 local function ShowResourceValue(args)
     local requestedResources = {}
     for arg in string.gmatch(args, "%S+") do
+        arg = string.lower(arg)
         if IsKnownResource(arg) then
             table.insert(requestedResources, arg)
         else
@@ -464,17 +466,24 @@ end
 SLASH_TOON_STATUS1 = "/ts"
 SlashCmdList["TOON_STATUS"] = function(msg)
     local _, _, cmd, args = string.find(msg, "%s?(%w+)%s?(.*)")
-
-    if (cmd == "csv") then
-        SavePlayerData()
-        ShowPlayerDataCSV()
-    elseif (cmd == "toon") then
-        AddRemoveToons(args)
-    elseif (cmd == "stat") then
-        ShowResourceValue(args)
-    elseif (not cmd) then
-        TogglePlayerDataWindow()
+    if (cmd) then 
+        cmd = string.lower(cmd) 
+        if (cmd == "csv") then
+            SavePlayerData()
+            ShowPlayerDataCSV()
+        elseif (cmd == "toon") then
+            AddRemoveToons(args)
+        elseif (cmd == "stat") then
+            ShowResourceValue(args)
+        elseif (cmd == "help") then
+            ShowHelpMessage()
+        elseif (cmd == "update") then
+            SavePlayerData()
+            TS_ChatMessage("Player data saved")
+        else
+            TS_ChatMessage(("Unknown command [%s]"):format(cmd))
+        end
     else
-        TS_ChatMessage(("Unknown command [%s]"):format(cmd))
+        TogglePlayerDataWindow()
     end
 end
