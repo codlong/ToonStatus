@@ -267,6 +267,13 @@ local function IsInList(item, list)
     return false
 end
 
+local function StatTotalsString(resources)
+    if (not resources) then
+        resources = knownResources
+    end
+
+end
+
 --
 -- Return header string for the resources requested
 --
@@ -280,7 +287,7 @@ local function ResourceHeaderString(resources)
         ret = ret..("%6s"):format("Level")
     end
     if (IsInList("gold", resources)) then
-        ret = ret..("%9s"):format("Gold")
+        ret = ret..("%11s"):format("Gold")
     end
     if (IsInList("resources", resources)) then
         ret = ret..("%10s"):format("Resources")
@@ -314,7 +321,7 @@ local function CharacterStatusString(data, resources)
             ret = ret .. ("%6d"):format(nvl(data.player_level, 0))
         end
         if (IsInList("gold", resources)) then
-            ret = ret .. ("%8.1fg"):format(nvl(data.copper, 0)/10000)
+            ret = ret .. ("%10.1fg"):format(nvl(data.copper, 0)/10000)
         end
         if (IsInList("resources", resources)) then
             ret = ret .. ("%10d"):format(nvl(data.order_resources, 0))
@@ -333,6 +340,40 @@ local function CharacterStatusString(data, resources)
 end
 
 --
+-- Return a display string for total resources
+--
+local function StatTotalsString(resources)
+    local total_resources = 0
+    local total_argunite = 0
+    local total_copper = 0
+
+    if (not resources) then
+        resources = knownResources
+    end
+    for player, stats in pairs(ToonStatus) do
+        total_resources = total_resources + nvl(stats.order_resources, 0)
+        total_argunite = total_argunite + nvl(stats.veiled_argunite, 0)
+        total_copper = total_copper + nvl(stats.copper, 0)
+    end
+
+    local ret = ("\n\n%-12s"):format("Totals")
+    if (IsInList("level", resources)) then
+        ret = ret..("%6s"):format("")
+    end
+    if (IsInList("gold", resources)) then
+        ret = ret..("%10.1fg"):format(total_copper/10000)
+    end
+    if (IsInList("resources", resources)) then
+        ret = ret..("%10d"):format(total_resources)
+    end
+    if (IsInList("argunite", resources)) then
+        ret = ret..("%9d"):format(total_argunite)
+    end
+
+    return ret
+end
+
+--
 -- Show the stat dialog
 --
 local function ShowPlayerDataWindow(requestedResources)
@@ -344,6 +385,7 @@ local function ShowPlayerDataWindow(requestedResources)
     for i, player in ipairs(ToonStatusActivePlayers) do
         messageFrame:AddMessage(CharacterStatusString(ToonStatus[player], requestedResources))
     end
+    messageFrame:AddMessage(StatTotalsString(requestedResources))
     ToonStatusFrame:Show()
 end
 
