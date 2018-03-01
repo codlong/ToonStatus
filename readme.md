@@ -7,12 +7,15 @@ The data is brought up-to-date for a toon when you log in, and when you display 
 # Usage
 `/ts` to toggle the ToonStatus table dialog
 
-`/ts toon [add remove] Player (Player2 ...)` to add or remove toons from display. Note: names are case-sensitive.
-
 `/ts csv` to get all data in comma-separated values format. Data is pre-selected, just hit ctrl-c to copy to the clipboard, and paste into your favorite spreadsheet program.
+
+`/ts help` to display this information.
+
+`/ts sort [level gold artifact resources argunite ilvl]` to sort the data by the given resource. Artifact sorts by
+artifact level.
 
 `/ts stat [level gold artifact resources argunite ilvl]` to filter stats. The filter does not persist, all stats will be shown on subsequent calls.
 
-`/ts update` to update current player data without displaying anything. Can be used in a macro with /logout to save before exit.
+`/ts toon [add remove] Player (Player2 ...)` to add or remove toons from display. Note: names are case-sensitive.
 
-`/ts help` to display this information.
+`/ts update` to update current player data without displaying anything. Can be used in a macro with /logout to save before exit.

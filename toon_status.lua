@@ -11,15 +11,21 @@ local _debug = false
 --
 -- Resources to track. These are the names the "stat" command recognizes
 --
-local knownResources = {
-    "level",
-    "gold",
-    "artifact",
-    "resources",
-    "argunite",
-    "ilvl"
+local resourceNames = {
+    ["level"] = "player_level",
+    ["gold"] = "copper",
+    ["resources"] = "order_resources",
+    ["argunite"] = "veiled_argunite",
+    ["ilvl"] = "ilvl",
+    ["artifact"] = "artifact_level"
 }
 
+local knownResources = {}
+for k, v in pairs(resourceNames) do
+    table.insert(knownResources, k)
+end
+
+local resourceSort = "toon"
 --
 -- WOW Events to monitor
 --
@@ -152,12 +158,14 @@ local function ShowHelpMessage()
     TS_ChatMessage("/ts to see the status of your toons")
     TS_ChatMessage("/ts toon [add remove] Player (Player2 ...) to add/remove toons from display (names are case-sensitive)")
     TS_ChatMessage("/ts csv to get data in comma-separated values format (just hit ctrl-c to copy to clipboard)")
-    local msg = "/ts stat ["
+    
+    local resource_string = ""
     for i, stat in ipairs(knownResources) do
-        msg = msg..stat.." "
+        resource_string = resource_string..stat.." "
     end
-    msg = msg.."] to filter stats (does not persist)"
-    TS_ChatMessage(msg)
+
+    TS_ChatMessage("/ts stat ["..resource_string.."] to filter stats (does not persist)")
+    TS_ChatMessage("/ts sort [toon "..resource_string.."] to sort the data by the given resource")
     TS_ChatMessage(
         "/ts update to update current player data without displaying anything. Can be used in a macro with /logout to save before exit.")
     TS_ChatMessage("/ts help to display this information")
@@ -206,7 +214,7 @@ local function GetPlayerData()
     -- Item Level
     local overall, equipped = GetAverageItemLevel()
     if _debug then TS_ChatMessage("ilvl " .. nvl(equipped, -1)) end
-        player_data.ilvl = equipped
+    player_data.ilvl = equipped
     return player_data
 end
 
@@ -265,13 +273,6 @@ local function IsInList(item, list)
         end
     end
     return false
-end
-
-local function StatTotalsString(resources)
-    if (not resources) then
-        resources = knownResources
-    end
-
 end
 
 --
@@ -376,9 +377,27 @@ end
 --
 -- Show the stat dialog
 --
-local function ShowPlayerDataWindow(requestedResources)
+local function ShowPlayerDataWindow(requestedResources, sort)
     SavePlayerData()
-    table.sort(ToonStatusActivePlayers)
+
+    if ((not sort) or (sort == "toon")) then
+        table.sort(ToonStatusActivePlayers)
+    elseif (IsInList(sort, knownResources)) then
+        table.sort(ToonStatusActivePlayers, 
+        function (a,b) 
+            -- Sort first by resource
+            resource_a = nvl(ToonStatus[a][resourceNames[sort]], 0)
+            resource_b = nvl(ToonStatus[b][resourceNames[sort]], 0)
+            if (not resource_a and not resource_b) then
+                return false 
+            -- Then by player name
+            elseif (resource_a == resource_b) then
+                resource_a = a
+                resource_b = b           
+            end
+            return resource_a < resource_b 
+        end)
+    end
 
     messageFrame:Clear()
     messageFrame:AddMessage(ResourceHeaderString(requestedResources))
@@ -396,7 +415,7 @@ local function TogglePlayerDataWindow()
     if ToonStatusFrame:IsShown() then
         ToonStatusFrame:Hide()
     else
-        ShowPlayerDataWindow(knownResources)
+        ShowPlayerDataWindow(knownResources, resourceSort)
     end  
 end
 
@@ -499,9 +518,25 @@ local function ShowResourceValue(args)
             TS_ChatMessage("Unknown resource "..arg)
         end
     end
-    ShowPlayerDataWindow(requestedResources)
+    ShowPlayerDataWindow(requestedResources, resourceSort)
 end
 
+--
+-- Set the sort value
+--
+local function SetSortValue(args)
+    for arg in string.gmatch(args, "%S+") do
+        arg = string.lower(arg)
+        if (arg == "toon" or IsInList(arg, knownResources)) then
+            resourceSort = arg
+        else
+            TS_ChatMessage("Unknown sort value "..arg)
+        end
+        break
+    end
+    TS_ChatMessage("Sort value is "..resourceSort)
+    ShowPlayerDataWindow(knownResources, resourceSort)
+end
 --
 -- Slash command
 --
@@ -522,6 +557,8 @@ SlashCmdList["TOON_STATUS"] = function(msg)
         elseif (cmd == "update") then
             SavePlayerData()
             TS_ChatMessage("Player data saved")
+        elseif (cmd == "sort") then
+            SetSortValue(args)      
         else
             TS_ChatMessage(("Unknown command [%s]"):format(cmd))
         end
