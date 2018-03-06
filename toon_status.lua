@@ -363,10 +363,12 @@ local function StatTotalsString(resources)
         resources = knownResources
     end
     for player, stats in pairs(ToonStatus) do
-        total_resources = total_resources + nvl(stats.order_resources, 0)
-        total_argunite = total_argunite + nvl(stats.veiled_argunite, 0)
-        total_copper = total_copper + nvl(stats.copper, 0)
-        total_essence = total_essence + nvl(stats.wakening_essence, 0)
+        if (IsInList(player, ToonStatusActivePlayers)) then
+            total_resources = total_resources + nvl(stats.order_resources, 0)
+            total_argunite = total_argunite + nvl(stats.veiled_argunite, 0)
+            total_copper = total_copper + nvl(stats.copper, 0)
+            total_essence = total_essence + nvl(stats.wakening_essence, 0)
+        end
     end
 
     local ret = ("\n\n%-12s"):format("Totals")
