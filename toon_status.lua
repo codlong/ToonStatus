@@ -42,8 +42,8 @@ local toonEvents = {
 -- Create our main dialog frame
 --
 local frame  = CreateFrame("Frame", "ToonStatusFrame", UIParent)
-frame.width  = 875
-frame.height = 250
+frame.width  = 900
+frame.height = 275
 frame:SetFrameStrata("FULLSCREEN_DIALOG")
 frame:SetSize(frame.width, frame.height)
 frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
@@ -292,7 +292,7 @@ local function ResourceHeaderString(resources)
         ret = ret..("%6s"):format("Level")
     end
     if (IsInList("gold", resources)) then
-        ret = ret..("%11s"):format("Gold")
+        ret = ret..("%13s"):format("Gold")
     end
     if (IsInList("resources", resources)) then
         ret = ret..("%10s"):format("Resources")
@@ -312,6 +312,35 @@ local function ResourceHeaderString(resources)
     return ret.."\n\n"
 end
 
+-- from sam_lie
+-- Compatible with Lua 5.0 and 5.1.
+-- Disclaimer : use at own risk especially for hedge fund reports :-)
+
+---============================================================
+-- add comma to separate thousands
+-- 
+local function comma_value(amount)
+    local formatted = amount
+    while true do  
+        formatted, k = string.gsub(formatted, "^(-?%d+)(%d%d%d)", '%1,%2')
+        if (k==0) then
+            break
+        end
+    end
+    return formatted
+end
+
+---============================================================
+-- rounds a number to the nearest decimal places
+--
+function round(val, decimal)
+    if (decimal) then
+      return math.floor( (val * 10^decimal) + 0.5) / (10^decimal)
+    else
+      return math.floor(val+0.5)
+    end
+  end
+
 --
 -- Return a display string for the resources requested
 --
@@ -329,7 +358,7 @@ local function CharacterStatusString(data, resources)
             ret = ret .. ("%6d"):format(nvl(data.player_level, 0))
         end
         if (IsInList("gold", resources)) then
-            ret = ret .. ("%10.1fg"):format(nvl(data.copper, 0)/10000)
+            ret = ret .. ("%13s"):format(comma_value(round(nvl(data.copper, 0)/10000, 1)))
         end
         if (IsInList("resources", resources)) then
             ret = ret .. ("%10d"):format(nvl(data.order_resources, 0))
@@ -376,7 +405,7 @@ local function StatTotalsString(resources)
         ret = ret..("%6s"):format("")
     end
     if (IsInList("gold", resources)) then
-        ret = ret..("%10.1fg"):format(total_copper/10000)
+        ret = ret..("%13s"):format(comma_value(round(total_copper/10000, 1)))
     end
     if (IsInList("resources", resources)) then
         ret = ret..("%10d"):format(total_resources)
@@ -505,7 +534,7 @@ local function AddRemoveToons(args)
             end
             table.insert(ToonStatusActivePlayers, arg)
         else
-            TS_ChatMessage(("Unknown toon command %s. Usage: /ts toon [add|remove] Player (Player2 ...)"):format(toon_cmd))
+            TS_ChatMessage(("Unknown toon command %s. Usage: /ts toon [add remove] Player (Player2 ...)"):format(toon_cmd))
             break
         end
     end
