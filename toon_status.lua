@@ -358,7 +358,7 @@ local function CharacterStatusString(data, resources)
             ret = ret .. ("%6d"):format(nvl(data.player_level, 0))
         end
         if (IsInList("gold", resources)) then
-            ret = ret .. ("%13s"):format(comma_value(round(nvl(data.copper, 0)/10000, 1)))
+            ret = ret .. ("%13s"):format(comma_value(round(nvl(data.copper, 0)/10000, 0)))
         end
         if (IsInList("resources", resources)) then
             ret = ret .. ("%10d"):format(nvl(data.order_resources, 0))
@@ -405,7 +405,7 @@ local function StatTotalsString(resources)
         ret = ret..("%6s"):format("")
     end
     if (IsInList("gold", resources)) then
-        ret = ret..("%13s"):format(comma_value(round(total_copper/10000, 1)))
+        ret = ret..("%13s"):format(comma_value(round(total_copper/10000, 0)))
     end
     if (IsInList("resources", resources)) then
         ret = ret..("%10d"):format(total_resources)

@@ -1,8 +1,8 @@
-## Interface: 70300
+## Interface: 80000
 ## Title: Toon Status
 ## Notes: Keep track of interesting levels to guide your play time
 ## Author: Kamishan
 ## Version: 1.2.6
 ## SavedVariables: ToonStatus ToonStatusActivePlayers
 toon_status.lua
-toon_status.xml
+
