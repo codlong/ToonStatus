@@ -14,11 +14,12 @@ local _debug = false
 local resourceNames = {
     ["level"] = "player_level",
     ["gold"] = "copper",
-    ["resources"] = "order_resources",
-    ["argunite"] = "veiled_argunite",
-    ["essence"] = "wakening_essence",
+    ["war_resources"] = "war_resources",
+    ["seafarers_dubloons"] = "seafarers_dubloons",
     ["ilvl"] = "ilvl",
-    ["artifact"] = "artifact_level"
+    ["artifact_power"] = "artifact_power",
+    ["artifact_xp"] = "artifact_xp",
+    ["artifact_level_xp"] = "artifact_level_xp",
 }
 
 local knownResources = {}
@@ -42,7 +43,7 @@ local toonEvents = {
 -- Create our main dialog frame
 --
 local frame  = CreateFrame("Frame", "ToonStatusFrame", UIParent)
-frame.width  = 900
+frame.width  = 650
 frame.height = 275
 frame:SetFrameStrata("FULLSCREEN_DIALOG")
 frame:SetSize(frame.width, frame.height)
@@ -176,11 +177,9 @@ end
 --  Returns interesting player resource stats:
 --      player_name
 --      copper
---      artifact_name
---      artifact_level
---      order_resources
---      veiled_argunite
---      wakening_essence
+--      artifact_power
+--      war_resources
+--      seafarers_dubloons
 --
 local function GetPlayerData()
     if _debug then TS_ChatMessage("GetPlayerData") end
@@ -197,21 +196,24 @@ local function GetPlayerData()
     if _debug then TS_ChatMessage("Copper " .. nvl(player_data.copper, -1)) end
 
     -- Artifact Info
-    local itemID, altItemID, artifact_name, icon, xp, pointsSpent, quality, artifactAppearanceID, appearanceModID, itemAppearanceID, altItemAppearanceID, altOnTop, artifactTier = C_ArtifactUI.GetEquippedArtifactInfo()
-    if _debug then TS_ChatMessage("Artifact " .. nvl(itemID, -1)) end
-    player_data.artifact_name = artifact_name
-    player_data.artifact_level = pointsSpent
+    if C_AzeriteItem.HasActiveAzeriteItem() then   
+        local azeriteItemLocation = C_AzeriteItem.FindActiveAzeriteItem()
+        local xp, totalLevelXP = C_AzeriteItem.GetAzeriteItemXPInfo(azeriteItemLocation)
+        local artifact_power = C_AzeriteItem.GetPowerLevel(azeriteItemLocation)
+
+        player_data.artifact_power = artifact_power
+        player_data.artifact_xp = xp
+        player_data.artifact_level_xp = totalLevelXP       
+    end
 
     -- Interesting Resources
     for i=1,GetCurrencyListSize() do
         local currency_name, isHeader, isExpanded, isUnused, isWatched, count, extraCurrencyType, icon, itemID = GetCurrencyListInfo(i)
         if _debug then TS_ChatMessage("Currency ".. nvl(currency_name, unknown)) end
-        if currency_name == "Order Resources" then
-            player_data.order_resources = count
-        elseif currency_name == "Veiled Argunite" then
-            player_data.veiled_argunite = count
-        elseif currency_name == "Wakening Essence" then
-            player_data.wakening_essence = count
+        if currency_name == "War Resources" then
+            player_data.war_resources = count
+        elseif currency_name == "Seafarer's Dubloon" then
+            player_data.seafarers_dubloons = count
         end
     end
 
@@ -294,20 +296,17 @@ local function ResourceHeaderString(resources)
     if (IsInList("gold", resources)) then
         ret = ret..("%13s"):format("Gold")
     end
-    if (IsInList("resources", resources)) then
+    if (IsInList("war_resources", resources)) then
         ret = ret..("%10s"):format("Resources")
     end
-    if (IsInList("argunite", resources)) then
-        ret = ret..("%9s"):format("Argunite")
-    end
-    if (IsInList("essence", resources)) then
-        ret = ret..("%8s"):format("Essence")
+    if (IsInList("seafarers_dubloons", resources)) then
+        ret = ret..("%9s"):format("Dubloons")
     end
     if (IsInList("ilvl", resources)) then
         ret = ret..("%6s"):format("iLvl")
     end
-    if (IsInList("artifact", resources)) then
-        ret = ret.." Artifact"
+    if (IsInList("artifact_xp", resources)) then
+        ret = ret.."  Heart of Azeroth"
     end
     return ret.."\n\n"
 end
@@ -360,20 +359,17 @@ local function CharacterStatusString(data, resources)
         if (IsInList("gold", resources)) then
             ret = ret .. ("%13s"):format(comma_value(round(nvl(data.copper, 0)/10000, 0)))
         end
-        if (IsInList("resources", resources)) then
-            ret = ret .. ("%10d"):format(nvl(data.order_resources, 0))
+        if (IsInList("war_resources", resources)) then
+            ret = ret .. ("%10d"):format(nvl(data.war_resources, 0))
         end
-        if (IsInList("argunite", resources)) then
-            ret = ret .. ("%9d"):format(nvl(data.veiled_argunite, 0))
-        end
-        if (IsInList("essence", resources)) then
-            ret = ret..("%8d"):format(nvl(data.wakening_essence, 0))
+        if (IsInList("seafarers_dubloons", resources)) then
+            ret = ret .. ("%9d"):format(nvl(data.seafarers_dubloons, 0))
         end
         if (IsInList("ilvl", resources)) then
             ret = ret .. ("%6.1f"):format(nvl(data.ilvl, 0.0))
         end
-        if (IsInList("artifact", resources) and data.artifact_name) then
-            ret = ret .. ( " %s (%d)"):format(data.artifact_name, nvl(data.artifact_level, 0))
+        if (IsInList("artifact_xp", resources)) then
+            ret = ret .. ("  %d (%d/%d)"):format(data.artifact_power, data.artifact_xp, data.artifact_level_xp)
         end
     end
     return ret 
@@ -384,19 +380,17 @@ end
 --
 local function StatTotalsString(resources)
     local total_resources = 0
-    local total_argunite = 0
+    local total_dubloons = 0
     local total_copper = 0
-    local total_essence = 0
 
     if (not resources) then
         resources = knownResources
     end
     for player, stats in pairs(ToonStatus) do
         if (IsInList(player, ToonStatusActivePlayers)) then
-            total_resources = total_resources + nvl(stats.order_resources, 0)
-            total_argunite = total_argunite + nvl(stats.veiled_argunite, 0)
+            total_resources = total_resources + nvl(stats.war_resources, 0)
+            total_dubloons = total_dubloons + nvl(stats.seafarers_dubloons, 0)
             total_copper = total_copper + nvl(stats.copper, 0)
-            total_essence = total_essence + nvl(stats.wakening_essence, 0)
         end
     end
 
@@ -407,14 +401,11 @@ local function StatTotalsString(resources)
     if (IsInList("gold", resources)) then
         ret = ret..("%13s"):format(comma_value(round(total_copper/10000, 0)))
     end
-    if (IsInList("resources", resources)) then
+    if (IsInList("war_resources", resources)) then
         ret = ret..("%10d"):format(total_resources)
     end
-    if (IsInList("argunite", resources)) then
-        ret = ret..("%9d"):format(total_argunite)
-    end
-    if (IsInList("essence", resources)) then
-        ret = ret..("%8d"):format(total_essence)
+    if (IsInList("seafarers_dubloons", resources)) then
+        ret = ret..("%9d"):format(total_dubloons)
     end
 
     return ret
@@ -470,15 +461,13 @@ end
 --
 local function CharacterStatusCSVString(data)
     if _debug then TS_ChatMessage("CharacterStatusString") end
-    return ("%s,%s,%d,\"%s\",%d,%d,%d,%d,%d"):format(
+    return ("%s,%d,%.0f,%d,%d,%d,%d"):format(
         nvl(data.player_name, "UNKNOWN"), 
         nvl(data.player_level, 0),
         nvl(data.copper, 0), 
-        nvl(data.artifact_name, "NO ARTIFACT"),
-        nvl(data.artifact_level, 0),
-        nvl(data.order_resources, 0),
-        nvl(data.veiled_argunite, 0),
-        nvl(data.wakening_essence, 0),
+        nvl(data.artifact_power, 0),
+        nvl(data.war_resources, 0),
+        nvl(data.seafarers_dubloons, 0),
         nvl(data.ilvl, 0)
     )
 end
@@ -496,7 +485,7 @@ local function ShowPlayerDataCSV()
         OnShow = function (self, data)
             self.editBox:SetMultiLine()
             local now = date("%m/%d/%y %H:%M:%S",time())
-            self.editBox:Insert("player,player_level,copper,artifact_name,artifact_level,order_resources,veiled_argunite,essence,ilvl,timestamp\n")
+            self.editBox:Insert("player,player_level,copper,artifact_power,war_resources,seafarers_dubloons,ilvl,timestamp\n")
             for i, player in ipairs(ToonStatusActivePlayers) do
             self.editBox:Insert(("%s,%s\n"):format(CharacterStatusCSVString(ToonStatus[player]), now))
             end
