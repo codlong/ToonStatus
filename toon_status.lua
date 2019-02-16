@@ -517,13 +517,13 @@ end
 --
 local function CharacterStatusCSVString(data)
     if _debug then TS_ChatMessage("CharacterStatusString") end
-    return ("%s,%d,%.0f,%d,%d,%d,%d"):format(
+    return ("%s,%d,%.0f,%d,%d,%d,%d,%d"):format(
         nvl(data.player_name, "UNKNOWN"), 
         nvl(data.player_level, 0),
         nvl(data.copper, 0), 
         nvl(data.artifact_power, 0),
         nvl(data.war_resources, 0),
-        nvl(data.service_medals, 0),
+        nvl(data.service_medal, 0),
         nvl(data.residuum, 0),
         nvl(data.ilvl, 0)
     )
@@ -542,7 +542,7 @@ local function ShowPlayerDataCSV()
         OnShow = function (self, data)
             self.editBox:SetMultiLine()
             local now = date("%m/%d/%y %H:%M:%S",time())
-            self.editBox:Insert("player,player_level,copper,artifact_power,war_resources,service_medals,residuum,ilvl,timestamp\n")
+            self.editBox:Insert("player,player_level,copper,artifact_power,war_resources,service_medal,residuum,ilvl,timestamp\n")
             for i, player in ipairs(ToonStatusActivePlayers) do
             self.editBox:Insert(("%s,%s\n"):format(CharacterStatusCSVString(ToonStatus[player]), now))
             end
