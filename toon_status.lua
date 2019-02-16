@@ -15,7 +15,8 @@ local resourceNames = {
     ["level"] = "player_level",
     ["gold"] = "copper",
     ["war_resources"] = "war_resources",
-    ["seafarers_dubloons"] = "seafarers_dubloons",
+    ["service_medal"] = "service_medal",
+    ["residuum"] = "residuum",
     ["ilvl"] = "ilvl",
     ["artifact_power"] = "artifact_power",
     ["artifact_xp"] = "artifact_xp",
@@ -27,7 +28,7 @@ for k, v in pairs(resourceNames) do
     table.insert(knownResources, k)
 end
 
-local resourceSort = "toon"
+local resourceSort = "ilvl"
 --
 -- WOW Events to monitor
 --
@@ -43,8 +44,8 @@ local toonEvents = {
 -- Create our main dialog frame
 --
 local frame  = CreateFrame("Frame", "ToonStatusFrame", UIParent)
-frame.width  = 650
-frame.height = 275
+frame.width  = 725
+frame.height = 325
 frame:SetFrameStrata("FULLSCREEN_DIALOG")
 frame:SetSize(frame.width, frame.height)
 frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
@@ -179,7 +180,8 @@ end
 --      copper
 --      artifact_power
 --      war_resources
---      seafarers_dubloons
+--      service_medal
+--      residuum
 --
 local function GetPlayerData()
     if _debug then TS_ChatMessage("GetPlayerData") end
@@ -212,8 +214,10 @@ local function GetPlayerData()
         if _debug then TS_ChatMessage("Currency ".. nvl(currency_name, unknown)) end
         if currency_name == "War Resources" then
             player_data.war_resources = count
-        elseif currency_name == "Seafarer's Dubloon" then
-            player_data.seafarers_dubloons = count
+        elseif currency_name == "Honorbound Service Medal" then
+            player_data.service_medal = count
+        elseif currency_name == "Titan Residuum" then
+            player_data.residuum = count
         end
     end
 
@@ -299,8 +303,11 @@ local function ResourceHeaderString(resources)
     if (IsInList("war_resources", resources)) then
         ret = ret..("%10s"):format("Resources")
     end
-    if (IsInList("seafarers_dubloons", resources)) then
-        ret = ret..("%9s"):format("Dubloons")
+    if (IsInList("service_medal", resources)) then
+        ret = ret..("%9s"):format("Medals")
+    end
+    if (IsInList("residuum", resources)) then
+        ret = ret..("%9s"):format("Residuum")
     end
     if (IsInList("ilvl", resources)) then
         ret = ret..("%6s"):format("iLvl")
@@ -362,8 +369,11 @@ local function CharacterStatusString(data, resources)
         if (IsInList("war_resources", resources)) then
             ret = ret .. ("%10d"):format(nvl(data.war_resources, 0))
         end
-        if (IsInList("seafarers_dubloons", resources)) then
-            ret = ret .. ("%9d"):format(nvl(data.seafarers_dubloons, 0))
+        if (IsInList("service_medal", resources)) then
+            ret = ret .. ("%9d"):format(nvl(data.service_medal, 0))
+        end
+        if (IsInList("residuum", resources)) then
+            ret = ret .. ("%9d"):format(nvl(data.residuum, 0))
         end
         if (IsInList("ilvl", resources)) then
             ret = ret .. ("%6.1f"):format(nvl(data.ilvl, 0.0))
@@ -380,7 +390,8 @@ end
 --
 local function StatTotalsString(resources)
     local total_resources = 0
-    local total_dubloons = 0
+    local total_medals = 0
+    local total_residuum = 0
     local total_copper = 0
 
     if (not resources) then
@@ -389,7 +400,8 @@ local function StatTotalsString(resources)
     for player, stats in pairs(ToonStatus) do
         if (IsInList(player, ToonStatusActivePlayers)) then
             total_resources = total_resources + nvl(stats.war_resources, 0)
-            total_dubloons = total_dubloons + nvl(stats.seafarers_dubloons, 0)
+            total_medals = total_medals + nvl(stats.service_medal, 0)
+            total_residuum = total_residuum + nvl(stats.residuum, 0)
             total_copper = total_copper + nvl(stats.copper, 0)
         end
     end
@@ -404,17 +416,61 @@ local function StatTotalsString(resources)
     if (IsInList("war_resources", resources)) then
         ret = ret..("%10d"):format(total_resources)
     end
-    if (IsInList("seafarers_dubloons", resources)) then
-        ret = ret..("%9d"):format(total_dubloons)
+    if (IsInList("service_medal", resources)) then
+        ret = ret..("%9d"):format(total_medals)
+    end
+    if (IsInList("residuum", resources)) then
+        ret = ret..("%9d"):format(total_residuum)
     end
 
     return ret
+end
+
+
+--
+-- Add or remove toon handler
+--
+local function AddRemoveToons(args)
+    local toon_cmd
+    for arg in string.gmatch(args, "%S+") do
+        if (not toon_cmd) then
+            toon_cmd = arg
+        elseif (toon_cmd == "remove" or toon_cmd == "r") then
+            for i, player in ipairs(ToonStatusActivePlayers) do
+                if (player == arg) then
+                    table.remove(ToonStatusActivePlayers, i)
+                end
+            end
+        elseif (toon_cmd == "add" or toon_cmd == 'a') then
+            for i, player in ipairs(ToonStatusActivePlayers) do
+                if (player == arg) then
+                    TS_ChatMessage("Toon is already active")
+                    return
+                end
+            end
+            table.insert(ToonStatusActivePlayers, arg)
+        else
+            TS_ChatMessage(("Unknown toon command %s. Usage: /ts toon [add remove] Player (Player2 ...)"):format(toon_cmd))
+            break
+        end
+    end
+    local toons = "Active players: "
+    for i, player in ipairs(ToonStatusActivePlayers) do
+        toons = toons .. player .. " "
+    end
+    TS_ChatMessage(toons)
 end
 
 --
 -- Show the stat dialog
 --
 local function ShowPlayerDataWindow(requestedResources, sort)
+    -- Add current player if not in active list
+    local current_toon = UnitName("player")
+    if (not IsInList(current_toon, ToonStatusActivePlayers)) then
+        AddRemoveToons("add "..current_toon)
+    end
+
     SavePlayerData()
 
     if ((not sort) or (sort == "toon")) then
@@ -467,7 +523,8 @@ local function CharacterStatusCSVString(data)
         nvl(data.copper, 0), 
         nvl(data.artifact_power, 0),
         nvl(data.war_resources, 0),
-        nvl(data.seafarers_dubloons, 0),
+        nvl(data.service_medals, 0),
+        nvl(data.residuum, 0),
         nvl(data.ilvl, 0)
     )
 end
@@ -485,7 +542,7 @@ local function ShowPlayerDataCSV()
         OnShow = function (self, data)
             self.editBox:SetMultiLine()
             local now = date("%m/%d/%y %H:%M:%S",time())
-            self.editBox:Insert("player,player_level,copper,artifact_power,war_resources,seafarers_dubloons,ilvl,timestamp\n")
+            self.editBox:Insert("player,player_level,copper,artifact_power,war_resources,service_medals,residuum,ilvl,timestamp\n")
             for i, player in ipairs(ToonStatusActivePlayers) do
             self.editBox:Insert(("%s,%s\n"):format(CharacterStatusCSVString(ToonStatus[player]), now))
             end
@@ -498,40 +555,6 @@ local function ShowPlayerDataCSV()
         preferredIndex = 3,  -- avoid some UI taint, see http://www.wowace.com/announcements/how-to-avoid-some-ui-taint/
     }
     StaticPopup_Show ("TOON_STATUS_CSV")
-end
-
---
--- Add or remove toon handler
---
-local function AddRemoveToons(args)
-    local toon_cmd
-    for arg in string.gmatch(args, "%S+") do
-        if (not toon_cmd) then
-            toon_cmd = arg
-        elseif (toon_cmd == "remove" or toon_cmd == "r") then
-            for i, player in ipairs(ToonStatusActivePlayers) do
-                if (player == arg) then
-                    table.remove(ToonStatusActivePlayers, i)
-                end
-            end
-        elseif (toon_cmd == "add" or toon_cmd == 'a') then
-            for i, player in ipairs(ToonStatusActivePlayers) do
-                if (player == arg) then
-                    TS_ChatMessage("Toon is already active")
-                    return
-                end
-            end
-            table.insert(ToonStatusActivePlayers, arg)
-        else
-            TS_ChatMessage(("Unknown toon command %s. Usage: /ts toon [add remove] Player (Player2 ...)"):format(toon_cmd))
-            break
-        end
-    end
-    local toons = "Active players: "
-    for i, player in ipairs(ToonStatusActivePlayers) do
-        toons = toons .. player .. " "
-    end
-    TS_ChatMessage(toons)
 end
 
 --
