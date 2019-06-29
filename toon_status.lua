@@ -15,7 +15,7 @@ local resourceNames = {
     ["level"] = "player_level",
     ["gold"] = "copper",
     ["war_resources"] = "war_resources",
-    ["service_medal"] = "service_medal",
+    ["manapearls"] = "manapearls",
     ["residuum"] = "residuum",
     ["ilvl"] = "ilvl",
     ["artifact_power"] = "artifact_power",
@@ -180,7 +180,7 @@ end
 --      copper
 --      artifact_power
 --      war_resources
---      service_medal
+--      manapearls
 --      residuum
 --
 local function GetPlayerData()
@@ -214,8 +214,8 @@ local function GetPlayerData()
         if _debug then TS_ChatMessage("Currency ".. nvl(currency_name, unknown)) end
         if currency_name == "War Resources" then
             player_data.war_resources = count
-        elseif currency_name == "Honorbound Service Medal" then
-            player_data.service_medal = count
+        elseif currency_name == "Prismatic Manapearl" then
+            player_data.manapearls = count
         elseif currency_name == "Titan Residuum" then
             player_data.residuum = count
         end
@@ -303,8 +303,8 @@ local function ResourceHeaderString(resources)
     if (IsInList("war_resources", resources)) then
         ret = ret..("%10s"):format("Resources")
     end
-    if (IsInList("service_medal", resources)) then
-        ret = ret..("%9s"):format("Medals")
+    if (IsInList("manapearls", resources)) then
+        ret = ret..("%11s"):format("Manapearls")
     end
     if (IsInList("residuum", resources)) then
         ret = ret..("%9s"):format("Residuum")
@@ -369,8 +369,8 @@ local function CharacterStatusString(data, resources)
         if (IsInList("war_resources", resources)) then
             ret = ret .. ("%10d"):format(nvl(data.war_resources, 0))
         end
-        if (IsInList("service_medal", resources)) then
-            ret = ret .. ("%9d"):format(nvl(data.service_medal, 0))
+        if (IsInList("manapearls", resources)) then
+            ret = ret .. ("%11d"):format(nvl(data.manapearls, 0))
         end
         if (IsInList("residuum", resources)) then
             ret = ret .. ("%9d"):format(nvl(data.residuum, 0))
@@ -390,7 +390,7 @@ end
 --
 local function StatTotalsString(resources)
     local total_resources = 0
-    local total_medals = 0
+    local total_pearls = 0
     local total_residuum = 0
     local total_copper = 0
 
@@ -400,7 +400,7 @@ local function StatTotalsString(resources)
     for player, stats in pairs(ToonStatus) do
         if (IsInList(player, ToonStatusActivePlayers)) then
             total_resources = total_resources + nvl(stats.war_resources, 0)
-            total_medals = total_medals + nvl(stats.service_medal, 0)
+            total_pearls = total_pearls + nvl(stats.manapearls, 0)
             total_residuum = total_residuum + nvl(stats.residuum, 0)
             total_copper = total_copper + nvl(stats.copper, 0)
         end
@@ -416,8 +416,8 @@ local function StatTotalsString(resources)
     if (IsInList("war_resources", resources)) then
         ret = ret..("%10d"):format(total_resources)
     end
-    if (IsInList("service_medal", resources)) then
-        ret = ret..("%9d"):format(total_medals)
+    if (IsInList("manapearls", resources)) then
+        ret = ret..("%11d"):format(total_pearls)
     end
     if (IsInList("residuum", resources)) then
         ret = ret..("%9d"):format(total_residuum)
@@ -523,7 +523,7 @@ local function CharacterStatusCSVString(data)
         nvl(data.copper, 0), 
         nvl(data.artifact_power, 0),
         nvl(data.war_resources, 0),
-        nvl(data.service_medal, 0),
+        nvl(data.manapearls, 0),
         nvl(data.residuum, 0),
         nvl(data.ilvl, 0)
     )
@@ -542,7 +542,7 @@ local function ShowPlayerDataCSV()
         OnShow = function (self, data)
             self.editBox:SetMultiLine()
             local now = date("%m/%d/%y %H:%M:%S",time())
-            self.editBox:Insert("player,player_level,copper,artifact_power,war_resources,service_medal,residuum,ilvl,timestamp\n")
+            self.editBox:Insert("player,player_level,copper,artifact_power,war_resources,manapearls,residuum,ilvl,timestamp\n")
             for i, player in ipairs(ToonStatusActivePlayers) do
             self.editBox:Insert(("%s,%s\n"):format(CharacterStatusCSVString(ToonStatus[player]), now))
             end
