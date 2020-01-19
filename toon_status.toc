@@ -1,8 +1,8 @@
-## Interface: 80205
+## Interface: 80300
 ## Title: Toon Status
 ## Notes: Keep track of interesting levels to guide your play time
 ## Author: Kamishan
-## Version: 2.2.2
+## Version: 2.3.0
 ## SavedVariables: ToonStatus ToonStatusActivePlayers
 toon_status.lua
 

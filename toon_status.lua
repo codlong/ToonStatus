@@ -15,8 +15,8 @@ local resourceNames = {
     ["level"] = "player_level",
     ["gold"] = "copper",
     ["war_resources"] = "war_resources",
-    ["manapearls"] = "manapearls",
-    ["residuum"] = "residuum",
+    ["mementos"] = "mementos",
+    ["visions"] = "visions",
     ["ilvl"] = "ilvl",
     ["artifact_power"] = "artifact_power",
     ["artifact_xp"] = "artifact_xp",
@@ -180,8 +180,8 @@ end
 --      copper
 --      artifact_power
 --      war_resources
---      manapearls
---      residuum
+--      mementos
+--      visions
 --
 local function GetPlayerData()
     if _debug then TS_ChatMessage("GetPlayerData") end
@@ -214,10 +214,10 @@ local function GetPlayerData()
         if _debug then TS_ChatMessage("Currency ".. nvl(currency_name, unknown)) end
         if currency_name == "War Resources" then
             player_data.war_resources = count
-        elseif currency_name == "Prismatic Manapearl" then
-            player_data.manapearls = count
-        elseif currency_name == "Titan Residuum" then
-            player_data.residuum = count
+        elseif currency_name == "Corrupted Mementos" then
+            player_data.mementos = count
+        elseif currency_name == "Coalescing Visions" then
+            player_data.visions = count
         end
     end
 
@@ -303,11 +303,11 @@ local function ResourceHeaderString(resources)
     if (IsInList("war_resources", resources)) then
         ret = ret..("%10s"):format("Resources")
     end
-    if (IsInList("manapearls", resources)) then
-        ret = ret..("%11s"):format("Manapearls")
+    if (IsInList("mementos", resources)) then
+        ret = ret..("%11s"):format("Mementos")
     end
-    if (IsInList("residuum", resources)) then
-        ret = ret..("%9s"):format("Residuum")
+    if (IsInList("visions", resources)) then
+        ret = ret..("%9s"):format("Visions")
     end
     if (IsInList("ilvl", resources)) then
         ret = ret..("%6s"):format("iLvl")
@@ -367,13 +367,13 @@ local function CharacterStatusString(data, resources)
             ret = ret .. ("%13s"):format(comma_value(round(nvl(data.copper, 0)/10000, 0)))
         end
         if (IsInList("war_resources", resources)) then
-            ret = ret .. ("%10d"):format(nvl(data.war_resources, 0))
+            ret = ret .. ("%10s"):format(comma_value(nvl(data.war_resources, 0)))
         end
-        if (IsInList("manapearls", resources)) then
-            ret = ret .. ("%11d"):format(nvl(data.manapearls, 0))
+        if (IsInList("mementos", resources)) then
+            ret = ret .. ("%11s"):format(comma_value(nvl(data.mementos, 0)))
         end
-        if (IsInList("residuum", resources)) then
-            ret = ret .. ("%9d"):format(nvl(data.residuum, 0))
+        if (IsInList("visions", resources)) then
+            ret = ret .. ("%9s"):format(comma_value(nvl(data.visions, 0)))
         end
         if (IsInList("ilvl", resources)) then
             ret = ret .. ("%6.1f"):format(nvl(data.ilvl, 0.0))
@@ -390,8 +390,8 @@ end
 --
 local function StatTotalsString(resources)
     local total_resources = 0
-    local total_pearls = 0
-    local total_residuum = 0
+    local total_mementos = 0
+    local total_visions = 0
     local total_copper = 0
 
     if (not resources) then
@@ -400,8 +400,8 @@ local function StatTotalsString(resources)
     for player, stats in pairs(ToonStatus) do
         if (IsInList(player, ToonStatusActivePlayers)) then
             total_resources = total_resources + nvl(stats.war_resources, 0)
-            total_pearls = total_pearls + nvl(stats.manapearls, 0)
-            total_residuum = total_residuum + nvl(stats.residuum, 0)
+            total_mementos = total_mementos + nvl(stats.mementos, 0)
+            total_visions = total_visions + nvl(stats.visions, 0)
             total_copper = total_copper + nvl(stats.copper, 0)
         end
     end
@@ -416,11 +416,11 @@ local function StatTotalsString(resources)
     if (IsInList("war_resources", resources)) then
         ret = ret..("%10d"):format(total_resources)
     end
-    if (IsInList("manapearls", resources)) then
-        ret = ret..("%11d"):format(total_pearls)
+    if (IsInList("mementos", resources)) then
+        ret = ret..("%11d"):format(total_mementos)
     end
-    if (IsInList("residuum", resources)) then
-        ret = ret..("%9d"):format(total_residuum)
+    if (IsInList("visions", resources)) then
+        ret = ret..("%9d"):format(total_visions)
     end
 
     return ret
@@ -523,8 +523,8 @@ local function CharacterStatusCSVString(data)
         nvl(data.copper, 0), 
         nvl(data.artifact_power, 0),
         nvl(data.war_resources, 0),
-        nvl(data.manapearls, 0),
-        nvl(data.residuum, 0),
+        nvl(data.mementos, 0),
+        nvl(data.visions, 0),
         nvl(data.ilvl, 0)
     )
 end
@@ -542,7 +542,7 @@ local function ShowPlayerDataCSV()
         OnShow = function (self, data)
             self.editBox:SetMultiLine()
             local now = date("%m/%d/%y %H:%M:%S",time())
-            self.editBox:Insert("player,player_level,copper,artifact_power,war_resources,manapearls,residuum,ilvl,timestamp\n")
+            self.editBox:Insert("player,player_level,copper,artifact_power,war_resources,mementos,visions,ilvl,timestamp\n")
             for i, player in ipairs(ToonStatusActivePlayers) do
             self.editBox:Insert(("%s,%s\n"):format(CharacterStatusCSVString(ToonStatus[player]), now))
             end
