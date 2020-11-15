@@ -17,7 +17,7 @@ local resourceNames = {
     ["war_resources"] = "war_resources",
     ["mementos"] = "mementos",
     ["visions"] = "visions",
-    ["residuum"] = "residuum",
+    ["commendations"] = "commendations",
     ["ilvl"] = "ilvl",
     ["artifact_power"] = "artifact_power",
     ["artifact_xp"] = "artifact_xp",
@@ -44,7 +44,7 @@ local toonEvents = {
 --
 -- Create our main dialog frame
 --
-local frame  = CreateFrame("Frame", "ToonStatusFrame", UIParent)
+local frame  = CreateFrame("Frame", "ToonStatusFrame", UIParent,  BackdropTemplateMixin and "BackdropTemplate")
 frame.width  = 800
 frame.height = 400
 frame:SetFrameStrata("FULLSCREEN_DIALOG")
@@ -148,7 +148,7 @@ local function TS_ChatMessage(msg)
     local appName = "Toon Status"
     if (type(msg) == "table") then
         for k, v in pairs(msg) do
-            print(("%s: %s: %s"):format(appName, k, v))
+            print(("%s: %s: %s"):format(appName, k, tostring(v)))
         end
     else
         print(("%s: %s"):format(appName, msg))
@@ -210,8 +210,10 @@ local function GetPlayerData()
     end
 
     -- Interesting Resources
-    for i=1,GetCurrencyListSize() do
-        local currency_name, isHeader, isExpanded, isUnused, isWatched, count, extraCurrencyType, icon, itemID = GetCurrencyListInfo(i)
+    for i=1,C_CurrencyInfo.GetCurrencyListSize() do
+        local currency_info = C_CurrencyInfo.GetCurrencyListInfo(i)
+        currency_name = currency_info["name"]
+        count = currency_info["quantity"]
         if _debug then TS_ChatMessage("Currency ".. nvl(currency_name, unknown)) end
         if currency_name == "War Resources" then
             player_data.war_resources = count
@@ -219,8 +221,8 @@ local function GetPlayerData()
             player_data.mementos = count
         elseif currency_name == "Coalescing Visions" then
             player_data.visions = count
-        elseif currency_name == "Titan Residuum" then
-            player_data.residuum = count
+        elseif currency_name == "Argent Commendation" then
+            player_data.commendations = count
         end
     end
 
@@ -312,8 +314,8 @@ local function ResourceHeaderString(resources)
     if (IsInList("visions", resources)) then
         ret = ret..("%9s"):format("Visions")
     end
-    if (IsInList("residuum", resources)) then
-        ret = ret..("%11s"):format("Titan Res")
+    if (IsInList("commendations", resources)) then
+        ret = ret..("%9s"):format("Argent")
     end
     if (IsInList("ilvl", resources)) then
         ret = ret..("%6s"):format("iLvl")
@@ -381,8 +383,8 @@ local function CharacterStatusString(data, resources)
         if (IsInList("visions", resources)) then
             ret = ret .. ("%9s"):format(comma_value(nvl(data.visions, 0)))
         end
-        if (IsInList("residuum", resources)) then
-            ret = ret .. ("%11s"):format(comma_value(nvl(data.residuum, 0)))
+        if (IsInList("commendations", resources)) then
+            ret = ret .. ("%9s"):format(comma_value(nvl(data.commendations, 0)))
         end
         if (IsInList("ilvl", resources)) then
             ret = ret .. ("%6.1f"):format(nvl(data.ilvl, 0.0))
@@ -401,7 +403,7 @@ local function StatTotalsString(resources)
     local total_resources = 0
     local total_mementos = 0
     local total_visions = 0
-    local total_residuum = 0
+    local total_commendations = 0
     local total_copper = 0
 
     if (not resources) then
@@ -412,7 +414,7 @@ local function StatTotalsString(resources)
             total_resources = total_resources + nvl(stats.war_resources, 0)
             total_mementos = total_mementos + nvl(stats.mementos, 0)
             total_visions = total_visions + nvl(stats.visions, 0)
-            total_residuum = total_residuum + nvl(stats.residuum, 0)
+            total_commendations = total_commendations + nvl(stats.commendations, 0)
             total_copper = total_copper + nvl(stats.copper, 0)
         end
     end
@@ -433,8 +435,8 @@ local function StatTotalsString(resources)
     if (IsInList("visions", resources)) then
         ret = ret..("%9d"):format(total_visions)
     end
-    if (IsInList("residuum", resources)) then
-        ret = ret..("%13d"):format(total_residuum)
+    if (IsInList("commendations", resources)) then
+        ret = ret..("%9d"):format(total_commendations)
     end
 
     return ret
@@ -539,7 +541,7 @@ local function CharacterStatusCSVString(data)
         nvl(data.war_resources, 0),
         nvl(data.mementos, 0),
         nvl(data.visions, 0),
-        nvl(data.residuum, 0),
+        nvl(data.commendations, 0),
         nvl(data.ilvl, 0)
     )
 end
@@ -557,7 +559,7 @@ local function ShowPlayerDataCSV()
         OnShow = function (self, data)
             self.editBox:SetMultiLine()
             local now = date("%m/%d/%y %H:%M:%S",time())
-            self.editBox:Insert("player,player_level,copper,artifact_power,war_resources,mementos,visions,residuum,ilvl,timestamp\n")
+            self.editBox:Insert("player,player_level,copper,artifact_power,war_resources,mementos,visions,commendations,ilvl,timestamp\n")
             for i, player in ipairs(ToonStatusActivePlayers) do
             self.editBox:Insert(("%s,%s\n"):format(CharacterStatusCSVString(ToonStatus[player]), now))
             end
