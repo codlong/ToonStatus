@@ -14,14 +14,10 @@ local _debug = false
 local resourceNames = {
     ["level"] = "player_level",
     ["gold"] = "copper",
-    ["war_resources"] = "war_resources",
-    ["mementos"] = "mementos",
-    ["visions"] = "visions",
-    ["commendations"] = "commendations",
-    ["ilvl"] = "ilvl",
-    ["artifact_power"] = "artifact_power",
-    ["artifact_xp"] = "artifact_xp",
-    ["artifact_level_xp"] = "artifact_level_xp",
+    ["soul_ash"] = "soul_ash",
+    ["anima"] = "anima",
+    ["stygia"] = "stygia",
+    ["ilvl"] = "ilvl"
 }
 
 local knownResources = {}
@@ -45,7 +41,7 @@ local toonEvents = {
 -- Create our main dialog frame
 --
 local frame  = CreateFrame("Frame", "ToonStatusFrame", UIParent,  BackdropTemplateMixin and "BackdropTemplate")
-frame.width  = 800
+frame.width  = 600
 frame.height = 400
 frame:SetFrameStrata("FULLSCREEN_DIALOG")
 frame:SetSize(frame.width, frame.height)
@@ -179,10 +175,9 @@ end
 --  Returns interesting player resource stats:
 --      player_name
 --      copper
---      artifact_power
---      war_resources
---      mementos
---      visions
+--      soul_ash
+--      anima
+--      stygia
 --
 local function GetPlayerData()
     if _debug then TS_ChatMessage("GetPlayerData") end
@@ -198,31 +193,18 @@ local function GetPlayerData()
     player_data.copper = GetMoney()
     if _debug then TS_ChatMessage("Copper " .. nvl(player_data.copper, -1)) end
 
-    -- Artifact Info
-    if C_AzeriteItem.HasActiveAzeriteItem() then   
-        local azeriteItemLocation = C_AzeriteItem.FindActiveAzeriteItem()
-        local xp, totalLevelXP = C_AzeriteItem.GetAzeriteItemXPInfo(azeriteItemLocation)
-        local artifact_power = C_AzeriteItem.GetPowerLevel(azeriteItemLocation)
-
-        player_data.artifact_power = artifact_power
-        player_data.artifact_xp = xp
-        player_data.artifact_level_xp = totalLevelXP       
-    end
-
     -- Interesting Resources
     for i=1,C_CurrencyInfo.GetCurrencyListSize() do
         local currency_info = C_CurrencyInfo.GetCurrencyListInfo(i)
         currency_name = currency_info["name"]
         count = currency_info["quantity"]
         if _debug then TS_ChatMessage("Currency ".. nvl(currency_name, unknown)) end
-        if currency_name == "War Resources" then
-            player_data.war_resources = count
-        elseif currency_name == "Corrupted Mementos" then
-            player_data.mementos = count
-        elseif currency_name == "Coalescing Visions" then
-            player_data.visions = count
-        elseif currency_name == "Argent Commendation" then
-            player_data.commendations = count
+        if currency_name == "Soul Ash" then
+            player_data.soul_ash = count
+        elseif currency_name == "Reservoir Anima" then
+            player_data.anima = count
+        elseif currency_name == "Stygia" then
+            player_data.stygia = count
         end
     end
 
@@ -305,24 +287,19 @@ local function ResourceHeaderString(resources)
     if (IsInList("gold", resources)) then
         ret = ret..("%13s"):format("Gold")
     end
-    if (IsInList("war_resources", resources)) then
-        ret = ret..("%10s"):format("War Res")
+    if (IsInList("soul_ash", resources)) then
+        ret = ret..("%10s"):format("Soul Ash")
     end
-    if (IsInList("mementos", resources)) then
-        ret = ret..("%11s"):format("Mementos")
+    if (IsInList("anima", resources)) then
+        ret = ret..("%9s"):format("Anima")
     end
-    if (IsInList("visions", resources)) then
-        ret = ret..("%9s"):format("Visions")
-    end
-    if (IsInList("commendations", resources)) then
-        ret = ret..("%9s"):format("Argent")
+    if (IsInList("stygia", resources)) then
+        ret = ret..("%9s"):format("Stygia")
     end
     if (IsInList("ilvl", resources)) then
-        ret = ret..("%6s"):format("iLvl")
+        ret = ret..("%7s"):format("iLvl")
     end
-    if (IsInList("artifact_xp", resources)) then
-        ret = ret.."  Heart of Azeroth"
-    end
+
     return ret.."\n\n"
 end
 
@@ -374,23 +351,17 @@ local function CharacterStatusString(data, resources)
         if (IsInList("gold", resources)) then
             ret = ret .. ("%13s"):format(comma_value(round(nvl(data.copper, 0)/10000, 0)))
         end
-        if (IsInList("war_resources", resources)) then
-            ret = ret .. ("%10s"):format(comma_value(nvl(data.war_resources, 0)))
+        if (IsInList("soul_ash", resources)) then
+            ret = ret .. ("%10s"):format(comma_value(nvl(data.soul_ash, 0)))
         end
-        if (IsInList("mementos", resources)) then
-            ret = ret .. ("%11s"):format(comma_value(nvl(data.mementos, 0)))
+        if (IsInList("anima", resources)) then
+            ret = ret .. ("%9s"):format(comma_value(nvl(data.anima, 0)))
         end
-        if (IsInList("visions", resources)) then
-            ret = ret .. ("%9s"):format(comma_value(nvl(data.visions, 0)))
-        end
-        if (IsInList("commendations", resources)) then
-            ret = ret .. ("%9s"):format(comma_value(nvl(data.commendations, 0)))
+        if (IsInList("stygia", resources)) then
+            ret = ret .. ("%9s"):format(comma_value(nvl(data.stygia, 0)))
         end
         if (IsInList("ilvl", resources)) then
-            ret = ret .. ("%6.1f"):format(nvl(data.ilvl, 0.0))
-        end
-        if (IsInList("artifact_xp", resources)) then
-            ret = ret .. ("  %d (%d/%d)"):format(data.artifact_power, data.artifact_xp, data.artifact_level_xp)
+            ret = ret .. ("%7.1f"):format(nvl(data.ilvl, 0.0))
         end
     end
     return ret 
@@ -400,23 +371,21 @@ end
 -- Return a display string for total resources
 --
 local function StatTotalsString(resources)
-    local total_resources = 0
-    local total_mementos = 0
-    local total_visions = 0
-    local total_commendations = 0
     local total_copper = 0
+    local total_soul_ash = 0
+    local total_anima = 0
+    local total_stygia = 0
 
     if (not resources) then
         resources = knownResources
     end
     for player, stats in pairs(ToonStatus) do
         if (IsInList(player, ToonStatusActivePlayers)) then
-            total_resources = total_resources + nvl(stats.war_resources, 0)
-            total_mementos = total_mementos + nvl(stats.mementos, 0)
-            total_visions = total_visions + nvl(stats.visions, 0)
-            total_commendations = total_commendations + nvl(stats.commendations, 0)
             total_copper = total_copper + nvl(stats.copper, 0)
-        end
+            total_soul_ash = total_soul_ash + nvl(stats.soul_ash, 0)
+            total_anima = total_anima + nvl(stats.anima, 0)
+            total_stygia = total_stygia + nvl(stats.stygia, 0)
+       end
     end
 
     local ret = ("\n\n%-12s"):format("Totals")
@@ -426,17 +395,14 @@ local function StatTotalsString(resources)
     if (IsInList("gold", resources)) then
         ret = ret..("%13s"):format(comma_value(round(total_copper/10000, 0)))
     end
-    if (IsInList("war_resources", resources)) then
-        ret = ret..("%10d"):format(total_resources)
+    if (IsInList("soul_ash", resources)) then
+        ret = ret..("%10d"):format(total_soul_ash)
     end
-    if (IsInList("mementos", resources)) then
-        ret = ret..("%11d"):format(total_mementos)
+    if (IsInList("anima", resources)) then
+        ret = ret..("%9d"):format(total_anima)
     end
-    if (IsInList("visions", resources)) then
-        ret = ret..("%9d"):format(total_visions)
-    end
-    if (IsInList("commendations", resources)) then
-        ret = ret..("%9d"):format(total_commendations)
+    if (IsInList("stygia", resources)) then
+        ret = ret..("%9d"):format(total_stygia)
     end
 
     return ret
@@ -533,15 +499,13 @@ end
 --
 local function CharacterStatusCSVString(data)
     if _debug then TS_ChatMessage("CharacterStatusString") end
-    return ("%s,%d,%.0f,%d,%d,%d,%d,%d,%d"):format(
+    return ("%s,%d,%.0f,%d,%d,%d,%d"):format(
         nvl(data.player_name, "UNKNOWN"), 
         nvl(data.player_level, 0),
         nvl(data.copper, 0), 
-        nvl(data.artifact_power, 0),
-        nvl(data.war_resources, 0),
-        nvl(data.mementos, 0),
-        nvl(data.visions, 0),
-        nvl(data.commendations, 0),
+        nvl(data.soul_ash, 0),
+        nvl(data.anima, 0),
+        nvl(data.stygia, 0),
         nvl(data.ilvl, 0)
     )
 end
@@ -559,7 +523,7 @@ local function ShowPlayerDataCSV()
         OnShow = function (self, data)
             self.editBox:SetMultiLine()
             local now = date("%m/%d/%y %H:%M:%S",time())
-            self.editBox:Insert("player,player_level,copper,artifact_power,war_resources,mementos,visions,commendations,ilvl,timestamp\n")
+            self.editBox:Insert("player,player_level,copper,soul_ash,anima,stygia,ilvl,timestamp\n")
             for i, player in ipairs(ToonStatusActivePlayers) do
             self.editBox:Insert(("%s,%s\n"):format(CharacterStatusCSVString(ToonStatus[player]), now))
             end

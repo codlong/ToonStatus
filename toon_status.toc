@@ -1,7 +1,7 @@
-## Interface: 90001
+## Interface: 90002
 ## Title: Toon Status
 ## Notes: Keep track of interesting levels to guide your play time
 ## Author: Kamishan
-## Version: 2.4.0
+## Version: 2.5.0
 ## SavedVariables: ToonStatus ToonStatusActivePlayers
 toon_status.lua
