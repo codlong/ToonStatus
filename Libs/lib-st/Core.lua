@@ -341,10 +341,15 @@ do
 	end
 
 	local StringToNumber = function(str)
-		if str == "" then
-			return 0;
+		if type(str) == "string" then
+			if str == "" then
+				return 0;
+			else
+				s = str:gsub(',', '')
+				return tonumber(s)
+			end
 		else
-			return tonumber(str)
+			return nil
 		end
 	end
 
@@ -394,6 +399,14 @@ do
 					b1 = tostring(b1);
 				end
 			end
+		end
+
+		if StringToNumber(a1) then 
+			a1 = StringToNumber(a1); 
+		end
+		
+		if StringToNumber(b1) then
+			b1 = StringToNumber(b1);
 		end
 
 		if a1 == b1 then

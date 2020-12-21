@@ -9,7 +9,7 @@ local addon_name, addon = ...
 local _debug = false
 
 --
--- Resources to track. These are the names the "stat" command recognizes
+-- Resources to track. 
 --
 -- Names stored in WTF
 local resourceNames = {
@@ -50,16 +50,15 @@ local toonEvents = {
     "ADDON_LOADED",
     "PLAYER_ENTERING_WORLD",
     "PLAYER_MONEY",
-    "CURRENCY_DISPLAY_UPDATE",
-    "ARTIFACT_UPDATE"
+    "CURRENCY_DISPLAY_UPDATE"
 }
 
 --
 -- Create our main dialog frame
 --
 local frame  = CreateFrame("Frame", "ToonStatusFrame", UIParent,  BackdropTemplateMixin and "BackdropTemplate")
-frame.width  = 700
-frame.height = 400
+frame.width  = 600
+frame.height = 375
 frame:SetFrameStrata("FULLSCREEN_DIALOG")
 frame:SetSize(frame.width, frame.height)
 frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
@@ -85,6 +84,11 @@ frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
 
 tinsert(UISpecialFrames, "ToonStatusFrame")
 
+-- Title
+frame.title = frame:CreateFontString("ToonStatus_Title", "OVERLAY", "GameFontNormal")
+frame.title:SetPoint("TOP", 0, -18)
+frame.title:SetText("ToonStatus")
+
 -- Close button
 local closeButton = CreateFrame("Button", nil, frame, "UIPanelButtonTemplate")
 closeButton:SetPoint("BOTTOM", 0, 10)
@@ -101,46 +105,20 @@ local myfont = CreateFont("ToonStatusDialog")
 myfont:SetFont("Interface\\Addons\\toon_status\\FiraMono-Medium.ttf", 12)
 
 local messageFrame = CreateFrame("ScrollingMessageFrame", nil, frame)
-messageFrame:SetPoint("CENTER", 15, 20)
+messageFrame:SetPoint("BOTTOM", 15, 50)
 messageFrame:SetSize(frame.width, 50)
-messageFrame:SetFontObject(myfont) --(GameFontNormal) 
-messageFrame:SetTextColor(1, 1, 1, 1) -- default color
+messageFrame:SetFontObject(GameFontNormal) --(GameFontNormal) 
+messageFrame:SetTextColor(1.0, 0.75, 0.1, 1.0) -- default color
 messageFrame:SetJustifyH("LEFT")
 messageFrame:SetHyperlinksEnabled(true)
 messageFrame:SetFading(false)
 messageFrame:SetMaxLines(500)
 frame.messageFrame = messageFrame
 
--- Scroll bar
---local scrollBar = CreateFrame("Slider", nil, frame, "UIPanelScrollBarTemplate")
---scrollBar:SetPoint("RIGHT", frame, "RIGHT", -10, 10)
---scrollBar:SetSize(30, frame.height - 90)
---scrollBar:SetMinMaxValues(0, 9)
---scrollBar:SetValueStep(1)
---scrollBar.scrollStep = 1
---frame.scrollBar = scrollBar
 
---scrollBar:SetScript("OnValueChanged", function(self, value)
---    messageFrame:SetScrollOffset(select(2, scrollBar:GetMinMaxValues()) - value)
---end)
-
---scrollBar:SetValue(select(2, scrollBar:GetMinMaxValues()))
-
---frame:SetScript("OnMouseWheel", function(self, delta)
---    local cur_val = scrollBar:GetValue()
---    local min_val, max_val = scrollBar:GetMinMaxValues()
-
---    if delta < 0 and cur_val < max_val then
---        cur_val = math.min(max_val, cur_val + 1)
---        scrollBar:SetValue(cur_val)
---    elseif delta > 0 and cur_val > min_val then
---        cur_val = math.max(min_val, cur_val - 1)
---        scrollBar:SetValue(cur_val)
---    end
---end)
-
+local ScrollingTable = LibStub("ScrollingTable")
+frame.statusTable = nil
 frame:Hide()
-
 --
 -- Returns val if it is not nil and has a value, alt otherwise
 -- 
@@ -176,13 +154,7 @@ local function ShowHelpMessage()
     TS_ChatMessage("/ts toon [add remove] Player (Player2 ...) to add/remove toons from display (names are case-sensitive)")
     TS_ChatMessage("/ts csv to get data in comma-separated values format (just hit ctrl-c to copy to clipboard)")
     
-    local resource_string = ""
-    for i, stat in ipairs(knownResources) do
-        resource_string = resource_string..stat.." "
-    end
 
-    TS_ChatMessage("/ts stat ["..resource_string.."] to filter stats (does not persist)")
-    TS_ChatMessage("/ts sort [toon "..resource_string.."] to sort the data by the given resource")
     TS_ChatMessage(
         "/ts update to update current player data without displaying anything. Can be used in a macro with /logout to save before exit.")
     TS_ChatMessage("/ts help to display this information")
@@ -190,11 +162,6 @@ end
 
 --
 --  Returns interesting player resource stats:
---      player_name
---      copper
---      soul_ash
---      anima
---      stygia
 --
 local function GetPlayerData()
     if _debug then TS_ChatMessage("GetPlayerData") end
@@ -261,7 +228,7 @@ local function OnEvent(self, event, arg1, ...)
             end
             TS_ChatMessage("/ts help to see options")
         end
-    elseif (event == "PLAYER_ENTERING_WORLD") then
+    else
         SavePlayerData()
     end
 end
@@ -287,37 +254,6 @@ local function IsInList(item, list)
         end
     end
     return false
-end
-
---
--- Return header string for the resources requested
---
-local function ResourceHeaderString(resources)
-    if (_debug) then TS_ChatMessage(resources) end
-    if (not resources) then
-        resources = knownResources
-    end
-    local ret = ("%-12s"):format("Toon")
-    if (IsInList("level", resources)) then
-        ret = ret..("%6s"):format("Level")
-    end
-    if (IsInList("gold", resources)) then
-        ret = ret..("%13s"):format("Gold")
-    end
-    if (IsInList("soul_ash", resources)) then
-        ret = ret..("%10s"):format("Soul Ash")
-    end
-    if (IsInList("anima", resources)) then
-        ret = ret..("%9s"):format("Anima")
-    end
-    if (IsInList("stygia", resources)) then
-        ret = ret..("%9s"):format("Stygia")
-    end
-    if (IsInList("ilvl", resources)) then
-        ret = ret..("%7s"):format("iLvl")
-    end
-
-    return ret.."\n\n"
 end
 
 -- from sam_lie
@@ -350,41 +286,6 @@ function round(val, decimal)
   end
 
 --
--- Return a display string for the resources requested
---
-local function CharacterStatusString(data, resources)
-    if _debug then TS_ChatMessage("CharacterStatusString") end
-    if (not resources) then
-        resources = knownResources
-    end
-
-    local ret = nil
-
-    if (data) then
-        ret = ("%-12s"):format(nvl(data.player_name, "UNKNOWN"))
-        if (IsInList("level", resources)) then
-            ret = ret .. ("%6d"):format(nvl(data.player_level, 0))
-        end
-        if (IsInList("gold", resources)) then
-            ret = ret .. ("%13s"):format(comma_value(round(nvl(data.copper, 0)/10000, 0)))
-        end
-        if (IsInList("soul_ash", resources)) then
-            ret = ret .. ("%10s"):format(comma_value(nvl(data.soul_ash, 0)))
-        end
-        if (IsInList("anima", resources)) then
-            ret = ret .. ("%9s"):format(comma_value(nvl(data.anima, 0)))
-        end
-        if (IsInList("stygia", resources)) then
-            ret = ret .. ("%9s"):format(comma_value(nvl(data.stygia, 0)))
-        end
-        if (IsInList("ilvl", resources)) then
-            ret = ret .. ("%7.1f"):format(nvl(data.ilvl, 0.0))
-        end
-    end
-    return ret 
-end
-
---
 -- Return a display string for total resources
 --
 local function StatTotalsString(resources)
@@ -394,7 +295,7 @@ local function StatTotalsString(resources)
     local total_stygia = 0
 
     if (not resources) then
-        resources = knownResources
+        resources = resourceTotals
     end
     for player, stats in pairs(ToonStatus) do
         if (IsInList(player, ToonStatusActivePlayers)) then
@@ -405,26 +306,22 @@ local function StatTotalsString(resources)
        end
     end
 
-    local ret = ("\n\n%-12s"):format("Totals")
-    if (IsInList("level", resources)) then
-        ret = ret..("%6s"):format("")
-    end
+    ret = ""
     if (IsInList("gold", resources)) then
-        ret = ret..("%13s"):format(comma_value(round(total_copper/10000, 0)))
+        ret = ret..("Gold: %27s\n"):format(comma_value(round(total_copper/10000, 0)))
     end
     if (IsInList("soul_ash", resources)) then
-        ret = ret..("%10d"):format(total_soul_ash)
+        ret = ret..("Soul Ash: %15d\n"):format(total_soul_ash)
     end
     if (IsInList("anima", resources)) then
-        ret = ret..("%9d"):format(total_anima)
+        ret = ret..("Reservoir Anima: %d\n"):format(total_anima)
     end
     if (IsInList("stygia", resources)) then
-        ret = ret..("%9d"):format(total_stygia)
+        ret = ret..("Stygia: %20d\n"):format(total_stygia)
     end
 
     return ret
 end
-
 
 --
 -- Add or remove toon handler
@@ -460,15 +357,15 @@ local function AddRemoveToons(args)
     TS_ChatMessage(toons)
 end
 
-local function GetColumn(columnName)
-    return {
+local function GetColumn(columnName, comparesort, sortnext)
+    retval = {
         ["name"] = columnName,
         ["width"] = 75,
         ["align"] = "RIGHT",
         ["color"] = { 
-            ["r"] = 0.5, 
-            ["g"] = 0.5, 
-            ["b"] = 1.0, 
+            ["r"] = 1.0, 
+            ["g"] = 0.75, 
+            ["b"] = 0.1, 
             ["a"] = 1.0 
         },
         ["colorargs"] = nil,
@@ -479,21 +376,18 @@ local function GetColumn(columnName)
             ["a"] = 0.0 
         }, 
         ["defaultsort"] = "dsc",
-        --["sortnext"]= 4,
+        --["sortnext"]= 1,
         --["comparesort"] = function (cella, cellb, columnName)
-        --    if cella then
-        --        TS_ChatMessage("CELLA")
-        --        TS_ChatMessage(cella)
-        --    end
-        --    if cellb then
-        --        TS_ChatMessage("CELLB")
-        --        TS_ChatMessage(cellb)
-        --    end
-        --    TS_ChatMessage(columnName)
-        --    return cella.value < cellb.value;
         --end,
         ["DoCellUpdate"] = nil,
     }
+    if comparesort then
+        retval["comparesort"] = comparesort
+    end
+    if sortnext then
+        retval["sortnext"] = sortnext
+    end
+    return retval
 end
 
 local function ToonTableData()
@@ -502,10 +396,12 @@ local function ToonTableData()
     for i, player in ipairs(ToonStatusActivePlayers) do
         foo = {}
         table.insert(foo, player)
-        for k, v in pairs(resourceNames) do
-            val = nvl(ToonStatus[player][v], 0)
-            if (v == "copper") then
-                val = round(nvl(val, 0)/10000, 0)
+        for k, v in pairs(resourceOrder) do
+            val = nvl(ToonStatus[player][resourceNames[v]], 0)
+            if (v == "gold") then
+                val = comma_value(round(nvl(val, 0)/10000, 0))
+            elseif (v == "ilvl") then
+                val = ("%.1f"):format(val)
             end
             table.insert(foo, val)
         end
@@ -520,19 +416,25 @@ local function InitScrollingTable()
     
     table.insert(cols, GetColumn("Toon"))
     for k, v in ipairs(resourceOrder) do      
-        table.insert(cols, GetColumn(resourceLabels[v]))
+        comparesort = nil
+        sortnext = nil
+        if k ~= "Toon" then
+            sortnext = 1
+        end
+        table.insert(cols, GetColumn(resourceLabels[v], comparesort, sortnext))
     end
     
-    local ScrollingTable = LibStub("ScrollingTable")
-    local statusTable = ScrollingTable:CreateST(cols, 8, nil, nil, frame)
+    if frame.statusTable == nil then        
+        frame.statusTable = ScrollingTable:CreateST(cols, 10, nil, nil, frame)
+    end
 
-    statusTable:SetData(ToonTableData(), true)
+    frame.statusTable:SetData(ToonTableData(), true)
 end
 
 --
 -- Show the stat dialog
 --
-local function ShowPlayerDataWindow(requestedResources, sort)
+local function ShowPlayerDataWindow(requestedResources)
     -- Add current player if not in active list
     local current_toon = UnitName("player")
     if (not IsInList(current_toon, ToonStatusActivePlayers)) then
@@ -540,32 +442,8 @@ local function ShowPlayerDataWindow(requestedResources, sort)
     end
 
     SavePlayerData()
-
-    if ((not sort) or (sort == "toon")) then
-        table.sort(ToonStatusActivePlayers)
-    elseif (IsInList(sort, knownResources)) then
-        table.sort(ToonStatusActivePlayers, 
-        function (a,b) 
-            -- Sort first by resource
-            resource_a = nvl(ToonStatus[a][resourceNames[sort]], 0)
-            resource_b = nvl(ToonStatus[b][resourceNames[sort]], 0)
-            if (not resource_a and not resource_b) then
-                return false 
-            -- Then by player name
-            elseif (resource_a == resource_b) then
-                resource_a = b
-                resource_b = a           
-            end
-            return resource_a > resource_b 
-        end)
-    end
-
     InitScrollingTable()
     messageFrame:Clear()
-    --messageFrame:AddMessage(ResourceHeaderString(requestedResources))
-    --for i, player in ipairs(ToonStatusActivePlayers) do
-    --    messageFrame:AddMessage(CharacterStatusString(ToonStatus[player], requestedResources))
-    --end
     messageFrame:AddMessage(StatTotalsString(requestedResources))
     ToonStatusFrame:Show()
 end
@@ -577,7 +455,7 @@ local function TogglePlayerDataWindow()
     if ToonStatusFrame:IsShown() then
         ToonStatusFrame:Hide()
     else
-        ShowPlayerDataWindow(knownResources, resourceSort)
+        ShowPlayerDataWindow(knownResources)
     end  
 end
 
@@ -585,7 +463,6 @@ end
 -- Return a csv string for the given data
 --
 local function CharacterStatusCSVString(data)
-    if _debug then TS_ChatMessage("CharacterStatusString") end
     return ("%s,%d,%.0f,%d,%d,%d,%d"):format(
         nvl(data.player_name, "UNKNOWN"), 
         nvl(data.player_level, 0),
@@ -645,24 +522,7 @@ local function ShowResourceValue(args)
             TS_ChatMessage("Unknown resource "..arg)
         end
     end
-    ShowPlayerDataWindow(requestedResources, resourceSort)
-end
-
---
--- Set the sort value
---
-local function SetSortValue(args)
-    for arg in string.gmatch(args, "%S+") do
-        arg = string.lower(arg)
-        if (arg == "toon" or IsInList(arg, knownResources)) then
-            resourceSort = arg
-        else
-            TS_ChatMessage("Unknown sort value "..arg)
-        end
-        break
-    end
-    TS_ChatMessage("Sort value is "..resourceSort)
-    ShowPlayerDataWindow(knownResources, resourceSort)
+    ShowPlayerDataWindow(requestedResources)
 end
 
 --
@@ -677,18 +537,13 @@ SlashCmdList["TOON_STATUS"] = function(msg)
             SavePlayerData()
             ShowPlayerDataCSV()
         elseif (cmd == "toon") then
-            AddRemoveToons(args)
-        elseif (cmd == "stat") then
-            ShowResourceValue(args)
+            AddRemoveToons(args)        
         elseif (cmd == "help") then
             ShowHelpMessage()
         elseif (cmd == "update") then
             SavePlayerData()
             TS_ChatMessage("Player data saved")
-        elseif (cmd == "sort") then
-            SetSortValue(args)      
-        elseif (cmd == "tt") then
-            TestTable(args)   
+  
         else
             TS_ChatMessage(("Unknown command [%s]"):format(cmd))
         end
