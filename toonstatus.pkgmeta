@@ -1,0 +1,4 @@
+externals:
+    Libs/lib-st: 
+        url: https://github.com/ddumont/lib-st.git
+        tag: latest

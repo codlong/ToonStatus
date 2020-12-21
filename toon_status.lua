@@ -11,14 +11,31 @@ local _debug = false
 --
 -- Resources to track. These are the names the "stat" command recognizes
 --
+-- Names stored in WTF
 local resourceNames = {
     ["level"] = "player_level",
+    ["ilvl"] = "ilvl",
     ["gold"] = "copper",
     ["soul_ash"] = "soul_ash",
     ["anima"] = "anima",
-    ["stygia"] = "stygia",
-    ["ilvl"] = "ilvl"
+    ["stygia"] = "stygia"
 }
+
+-- Labels for display
+local resourceLabels = {
+    ["level"] = "Level",
+    ["ilvl"] = "iLvl",
+    ["gold"] = "Gold",
+    ["soul_ash"] = "Soul Ash",
+    ["anima"] = "Anima",
+    ["stygia"] = "Stygia"
+}
+
+-- Sort order
+local resourceOrder = {"level", "ilvl", "gold", "soul_ash", "anima", "stygia"}
+
+-- Track totals across Toons
+local resourceTotals = {"gold", "soul_ash", "anima", "stygia"}
 
 local knownResources = {}
 for k, v in pairs(resourceNames) do
@@ -41,7 +58,7 @@ local toonEvents = {
 -- Create our main dialog frame
 --
 local frame  = CreateFrame("Frame", "ToonStatusFrame", UIParent,  BackdropTemplateMixin and "BackdropTemplate")
-frame.width  = 600
+frame.width  = 700
 frame.height = 400
 frame:SetFrameStrata("FULLSCREEN_DIALOG")
 frame:SetSize(frame.width, frame.height)
@@ -85,7 +102,7 @@ myfont:SetFont("Interface\\Addons\\toon_status\\FiraMono-Medium.ttf", 12)
 
 local messageFrame = CreateFrame("ScrollingMessageFrame", nil, frame)
 messageFrame:SetPoint("CENTER", 15, 20)
-messageFrame:SetSize(frame.width, frame.height - 50)
+messageFrame:SetSize(frame.width, 50)
 messageFrame:SetFontObject(myfont) --(GameFontNormal) 
 messageFrame:SetTextColor(1, 1, 1, 1) -- default color
 messageFrame:SetJustifyH("LEFT")
@@ -95,32 +112,32 @@ messageFrame:SetMaxLines(500)
 frame.messageFrame = messageFrame
 
 -- Scroll bar
-local scrollBar = CreateFrame("Slider", nil, frame, "UIPanelScrollBarTemplate")
-scrollBar:SetPoint("RIGHT", frame, "RIGHT", -10, 10)
-scrollBar:SetSize(30, frame.height - 90)
-scrollBar:SetMinMaxValues(0, 9)
-scrollBar:SetValueStep(1)
-scrollBar.scrollStep = 1
-frame.scrollBar = scrollBar
+--local scrollBar = CreateFrame("Slider", nil, frame, "UIPanelScrollBarTemplate")
+--scrollBar:SetPoint("RIGHT", frame, "RIGHT", -10, 10)
+--scrollBar:SetSize(30, frame.height - 90)
+--scrollBar:SetMinMaxValues(0, 9)
+--scrollBar:SetValueStep(1)
+--scrollBar.scrollStep = 1
+--frame.scrollBar = scrollBar
 
-scrollBar:SetScript("OnValueChanged", function(self, value)
-    messageFrame:SetScrollOffset(select(2, scrollBar:GetMinMaxValues()) - value)
-end)
+--scrollBar:SetScript("OnValueChanged", function(self, value)
+--    messageFrame:SetScrollOffset(select(2, scrollBar:GetMinMaxValues()) - value)
+--end)
 
-scrollBar:SetValue(select(2, scrollBar:GetMinMaxValues()))
+--scrollBar:SetValue(select(2, scrollBar:GetMinMaxValues()))
 
-frame:SetScript("OnMouseWheel", function(self, delta)
-    local cur_val = scrollBar:GetValue()
-    local min_val, max_val = scrollBar:GetMinMaxValues()
+--frame:SetScript("OnMouseWheel", function(self, delta)
+--    local cur_val = scrollBar:GetValue()
+--    local min_val, max_val = scrollBar:GetMinMaxValues()
 
-    if delta < 0 and cur_val < max_val then
-        cur_val = math.min(max_val, cur_val + 1)
-        scrollBar:SetValue(cur_val)
-    elseif delta > 0 and cur_val > min_val then
-        cur_val = math.max(min_val, cur_val - 1)
-        scrollBar:SetValue(cur_val)
-    end
-end)
+--    if delta < 0 and cur_val < max_val then
+--        cur_val = math.min(max_val, cur_val + 1)
+--        scrollBar:SetValue(cur_val)
+--    elseif delta > 0 and cur_val > min_val then
+--        cur_val = math.max(min_val, cur_val - 1)
+--        scrollBar:SetValue(cur_val)
+--    end
+--end)
 
 frame:Hide()
 
@@ -443,6 +460,75 @@ local function AddRemoveToons(args)
     TS_ChatMessage(toons)
 end
 
+local function GetColumn(columnName)
+    return {
+        ["name"] = columnName,
+        ["width"] = 75,
+        ["align"] = "RIGHT",
+        ["color"] = { 
+            ["r"] = 0.5, 
+            ["g"] = 0.5, 
+            ["b"] = 1.0, 
+            ["a"] = 1.0 
+        },
+        ["colorargs"] = nil,
+        ["bgcolor"] = {
+            ["r"] = 0.0, 
+            ["g"] = 0.0, 
+            ["b"] = 0.0, 
+            ["a"] = 0.0 
+        }, 
+        ["defaultsort"] = "dsc",
+        --["sortnext"]= 4,
+        --["comparesort"] = function (cella, cellb, columnName)
+        --    if cella then
+        --        TS_ChatMessage("CELLA")
+        --        TS_ChatMessage(cella)
+        --    end
+        --    if cellb then
+        --        TS_ChatMessage("CELLB")
+        --        TS_ChatMessage(cellb)
+        --    end
+        --    TS_ChatMessage(columnName)
+        --    return cella.value < cellb.value;
+        --end,
+        ["DoCellUpdate"] = nil,
+    }
+end
+
+local function ToonTableData()
+    data = {}
+    
+    for i, player in ipairs(ToonStatusActivePlayers) do
+        foo = {}
+        table.insert(foo, player)
+        for k, v in pairs(resourceNames) do
+            val = nvl(ToonStatus[player][v], 0)
+            if (v == "copper") then
+                val = round(nvl(val, 0)/10000, 0)
+            end
+            table.insert(foo, val)
+        end
+        table.insert(data, foo)
+    end
+
+    return data
+end
+
+local function InitScrollingTable()
+    cols = {}
+    
+    table.insert(cols, GetColumn("Toon"))
+    for k, v in ipairs(resourceOrder) do      
+        table.insert(cols, GetColumn(resourceLabels[v]))
+    end
+    
+    local ScrollingTable = LibStub("ScrollingTable")
+    local statusTable = ScrollingTable:CreateST(cols, 8, nil, nil, frame)
+
+    statusTable:SetData(ToonTableData(), true)
+end
+
 --
 -- Show the stat dialog
 --
@@ -474,11 +560,12 @@ local function ShowPlayerDataWindow(requestedResources, sort)
         end)
     end
 
+    InitScrollingTable()
     messageFrame:Clear()
-    messageFrame:AddMessage(ResourceHeaderString(requestedResources))
-    for i, player in ipairs(ToonStatusActivePlayers) do
-        messageFrame:AddMessage(CharacterStatusString(ToonStatus[player], requestedResources))
-    end
+    --messageFrame:AddMessage(ResourceHeaderString(requestedResources))
+    --for i, player in ipairs(ToonStatusActivePlayers) do
+    --    messageFrame:AddMessage(CharacterStatusString(ToonStatus[player], requestedResources))
+    --end
     messageFrame:AddMessage(StatTotalsString(requestedResources))
     ToonStatusFrame:Show()
 end
@@ -577,6 +664,7 @@ local function SetSortValue(args)
     TS_ChatMessage("Sort value is "..resourceSort)
     ShowPlayerDataWindow(knownResources, resourceSort)
 end
+
 --
 -- Slash command
 --
@@ -599,6 +687,8 @@ SlashCmdList["TOON_STATUS"] = function(msg)
             TS_ChatMessage("Player data saved")
         elseif (cmd == "sort") then
             SetSortValue(args)      
+        elseif (cmd == "tt") then
+            TestTable(args)   
         else
             TS_ChatMessage(("Unknown command [%s]"):format(cmd))
         end

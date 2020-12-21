@@ -4,4 +4,10 @@
 ## Author: Kamishan
 ## Version: 2.5.0
 ## SavedVariables: ToonStatus ToonStatusActivePlayers
+## OptionalDeps: Lib-ScrollingTable
+
+#@no-lib-strip@
+Libs\lib-st\Core.lua
+#@end-no-lib-strip@
+
 toon_status.lua
