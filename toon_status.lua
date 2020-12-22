@@ -8,6 +8,9 @@ local addon_name, addon = ...
 --
 local _debug = false
 
+-- TODO:
+-- Campaign Progress /script print(C_CurrencyInfo.GetCurrencyInfo(1889).quantity)
+
 --
 -- Resources to track. 
 --
@@ -15,6 +18,7 @@ local _debug = false
 local resourceNames = {
     ["level"] = "player_level",
     ["ilvl"] = "ilvl",
+    ["renown"] = "renown",
     ["gold"] = "copper",
     ["soul_ash"] = "soul_ash",
     ["anima"] = "anima",
@@ -25,6 +29,7 @@ local resourceNames = {
 local resourceLabels = {
     ["level"] = "Level",
     ["ilvl"] = "iLvl",
+    ["renown"] = "Renown",
     ["gold"] = "Gold",
     ["soul_ash"] = "Soul Ash",
     ["anima"] = "Anima",
@@ -32,7 +37,7 @@ local resourceLabels = {
 }
 
 -- Sort order
-local resourceOrder = {"level", "ilvl", "gold", "soul_ash", "anima", "stygia"}
+local resourceOrder = {"level", "ilvl", "renown", "gold", "soul_ash", "anima", "stygia"}
 
 -- Track totals across Toons
 local resourceTotals = {"gold", "soul_ash", "anima", "stygia"}
@@ -57,8 +62,8 @@ local toonEvents = {
 -- Create our main dialog frame
 --
 local frame  = CreateFrame("Frame", "ToonStatusFrame", UIParent,  BackdropTemplateMixin and "BackdropTemplate")
-frame.width  = 600
-frame.height = 375
+frame.width  = 675
+frame.height = 450
 frame:SetFrameStrata("FULLSCREEN_DIALOG")
 frame:SetSize(frame.width, frame.height)
 frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
@@ -172,6 +177,9 @@ local function GetPlayerData()
     if _debug then TS_ChatMessage("Player " .. nvl(player_name, "UNKNOWN")) end
     player_data.player_name = player_name
     player_data.player_level = UnitLevel("player")
+
+    -- Renown
+    player_data.renown = C_CovenantSanctumUI.GetRenownLevel()
 
     -- Gold
     player_data.copper = GetMoney()
@@ -425,7 +433,8 @@ local function InitScrollingTable()
     end
     
     if frame.statusTable == nil then        
-        frame.statusTable = ScrollingTable:CreateST(cols, 10, nil, nil, frame)
+        frame.statusTable = ScrollingTable:CreateST(cols, 15, nil, nil, frame)
+        frame.statusTable.frame:SetPoint("TOP", frame, "TOP", 0, -50)
     end
 
     frame.statusTable:SetData(ToonTableData(), true)
@@ -463,9 +472,10 @@ end
 -- Return a csv string for the given data
 --
 local function CharacterStatusCSVString(data)
-    return ("%s,%d,%.0f,%d,%d,%d,%d"):format(
+    return ("%s,%d,%d,%.0f,%d,%d,%d,%d"):format(
         nvl(data.player_name, "UNKNOWN"), 
         nvl(data.player_level, 0),
+        nvl(data.renown, 0),
         nvl(data.copper, 0), 
         nvl(data.soul_ash, 0),
         nvl(data.anima, 0),
@@ -487,7 +497,7 @@ local function ShowPlayerDataCSV()
         OnShow = function (self, data)
             self.editBox:SetMultiLine()
             local now = date("%m/%d/%y %H:%M:%S",time())
-            self.editBox:Insert("player,player_level,copper,soul_ash,anima,stygia,ilvl,timestamp\n")
+            self.editBox:Insert("player,player_level,renown,copper,soul_ash,anima,stygia,ilvl,timestamp\n")
             for i, player in ipairs(ToonStatusActivePlayers) do
             self.editBox:Insert(("%s,%s\n"):format(CharacterStatusCSVString(ToonStatus[player]), now))
             end
@@ -543,7 +553,6 @@ SlashCmdList["TOON_STATUS"] = function(msg)
         elseif (cmd == "update") then
             SavePlayerData()
             TS_ChatMessage("Player data saved")
-  
         else
             TS_ChatMessage(("Unknown command [%s]"):format(cmd))
         end
