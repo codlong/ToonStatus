@@ -8,9 +8,6 @@ local addon_name, addon = ...
 --
 local _debug = false
 
--- TODO:
--- Campaign Progress /script print(C_CurrencyInfo.GetCurrencyInfo(1889).quantity)
-
 --
 -- Resources to track. 
 --
@@ -22,7 +19,8 @@ local resourceNames = {
     ["gold"] = "copper",
     ["soul_ash"] = "soul_ash",
     ["anima"] = "anima",
-    ["stygia"] = "stygia"
+    ["stygia"] = "stygia",
+    ["adventure"] = "adventure"
 }
 
 -- Labels for display
@@ -33,11 +31,12 @@ local resourceLabels = {
     ["gold"] = "Gold",
     ["soul_ash"] = "Soul Ash",
     ["anima"] = "Anima",
-    ["stygia"] = "Stygia"
+    ["stygia"] = "Stygia",
+    ["adventure"] = "Adv Prog"
 }
 
 -- Sort order
-local resourceOrder = {"level", "ilvl", "renown", "gold", "soul_ash", "anima", "stygia"}
+local resourceOrder = {"level", "ilvl", "renown", "gold", "soul_ash", "anima", "stygia", "adventure"}
 
 -- Track totals across Toons
 local resourceTotals = {"gold", "soul_ash", "anima", "stygia"}
@@ -62,7 +61,7 @@ local toonEvents = {
 -- Create our main dialog frame
 --
 local frame  = CreateFrame("Frame", "ToonStatusFrame", UIParent,  BackdropTemplateMixin and "BackdropTemplate")
-frame.width  = 675
+frame.width  = 750
 frame.height = 450
 frame:SetFrameStrata("FULLSCREEN_DIALOG")
 frame:SetSize(frame.width, frame.height)
@@ -158,10 +157,10 @@ local function ShowHelpMessage()
     TS_ChatMessage("/ts to see the status of your toons")
     TS_ChatMessage("/ts toon [add remove] Player (Player2 ...) to add/remove toons from display (names are case-sensitive)")
     TS_ChatMessage("/ts csv to get data in comma-separated values format (just hit ctrl-c to copy to clipboard)")
-    
-
     TS_ChatMessage(
         "/ts update to update current player data without displaying anything. Can be used in a macro with /logout to save before exit.")
+    TS_ChatMessage(
+        "Adventure Campaign Progress (Adv Prog) is a new 'currency' that allows you to get better follower missions, and is now tracked.")
     TS_ChatMessage("/ts help to display this information")
 end
 
@@ -185,7 +184,11 @@ local function GetPlayerData()
     player_data.copper = GetMoney()
     if _debug then TS_ChatMessage("Copper " .. nvl(player_data.copper, -1)) end
 
-    -- Interesting Resources
+    -- Adventure Campaign Progress
+    local adventure_progress = C_CurrencyInfo.GetCurrencyInfo(1889)
+    player_data.adventure = adventure_progress.quantity
+
+    -- Interesting Currency
     for i=1,C_CurrencyInfo.GetCurrencyListSize() do
         local currency_info = C_CurrencyInfo.GetCurrencyListInfo(i)
         currency_name = currency_info["name"]
@@ -319,13 +322,13 @@ local function StatTotalsString(resources)
         ret = ret..("Gold: %27s\n"):format(comma_value(round(total_copper/10000, 0)))
     end
     if (IsInList("soul_ash", resources)) then
-        ret = ret..("Soul Ash: %15d\n"):format(total_soul_ash)
+        ret = ret..("Soul Ash: %25d\n"):format(total_soul_ash)
     end
     if (IsInList("anima", resources)) then
-        ret = ret..("Reservoir Anima: %d\n"):format(total_anima)
+        ret = ret..("Reservoir Anima: %12d\n"):format(total_anima)
     end
     if (IsInList("stygia", resources)) then
-        ret = ret..("Stygia: %20d\n"):format(total_stygia)
+        ret = ret..("Stygia: %28d\n"):format(total_stygia)
     end
 
     return ret
@@ -434,7 +437,7 @@ local function InitScrollingTable()
     
     if frame.statusTable == nil then        
         frame.statusTable = ScrollingTable:CreateST(cols, 15, nil, nil, frame)
-        frame.statusTable.frame:SetPoint("TOP", frame, "TOP", 0, -50)
+        frame.statusTable.frame:SetPoint("TOP", frame, "TOP", 0, -75)
     end
 
     frame.statusTable:SetData(ToonTableData(), true)
@@ -472,7 +475,7 @@ end
 -- Return a csv string for the given data
 --
 local function CharacterStatusCSVString(data)
-    return ("%s,%d,%d,%.0f,%d,%d,%d,%d"):format(
+    return ("%s,%d,%d,%.0f,%d,%d,%d,%d,%d"):format(
         nvl(data.player_name, "UNKNOWN"), 
         nvl(data.player_level, 0),
         nvl(data.renown, 0),
@@ -480,7 +483,8 @@ local function CharacterStatusCSVString(data)
         nvl(data.soul_ash, 0),
         nvl(data.anima, 0),
         nvl(data.stygia, 0),
-        nvl(data.ilvl, 0)
+        nvl(data.ilvl, 0),
+        nvl(data.adventure, 0)
     )
 end
 
@@ -497,7 +501,7 @@ local function ShowPlayerDataCSV()
         OnShow = function (self, data)
             self.editBox:SetMultiLine()
             local now = date("%m/%d/%y %H:%M:%S",time())
-            self.editBox:Insert("player,player_level,renown,copper,soul_ash,anima,stygia,ilvl,timestamp\n")
+            self.editBox:Insert("player,player_level,renown,copper,soul_ash,anima,stygia,ilvl,adventure,timestamp\n")
             for i, player in ipairs(ToonStatusActivePlayers) do
             self.editBox:Insert(("%s,%s\n"):format(CharacterStatusCSVString(ToonStatus[player]), now))
             end
