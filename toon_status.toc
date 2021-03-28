@@ -2,7 +2,7 @@
 ## Title: Toon Status
 ## Notes: Keep track of interesting levels to guide your play time
 ## Author: Kamishan
-## Version: 3.0.2
+## Version: 3.0.3
 ## SavedVariables: ToonStatus ToonStatusActivePlayers
 ## OptionalDeps: Lib-ScrollingTable
 
