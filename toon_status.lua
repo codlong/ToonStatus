@@ -159,6 +159,7 @@ local function ShowHelpMessage()
     TS_ChatMessage("/ts csv to get data in comma-separated values format (just hit ctrl-c to copy to clipboard)")
     TS_ChatMessage(
         "/ts update to update current player data without displaying anything. Can be used in a macro with /logout to save before exit.")
+    TS_ChatMessage("To sort data, simply click on the column header in the table.")
     TS_ChatMessage(
         "Adventure Campaign Progress (Adv Prog) is a new 'currency' that allows you to get better follower missions, and is now tracked.")
     TS_ChatMessage("/ts help to display this information")
@@ -322,7 +323,7 @@ local function StatTotalsString(resources)
         ret = ret..("Gold: %27s\n"):format(comma_value(round(total_copper/10000, 0)))
     end
     if (IsInList("soul_ash", resources)) then
-        ret = ret..("Soul Ash: %25d\n"):format(total_soul_ash)
+        ret = ret..("Soul Ash: %24d\n"):format(total_soul_ash)
     end
     if (IsInList("anima", resources)) then
         ret = ret..("Reservoir Anima: %12d\n"):format(total_anima)
