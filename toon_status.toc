@@ -1,8 +1,8 @@
-## Interface: 90005
+## Interface: 100002
 ## Title: Toon Status
 ## Notes: Keep track of interesting levels to guide your play time
 ## Author: Kamishan
-## Version: 3.0.3
+## Version: 4.0.1
 ## SavedVariables: ToonStatus ToonStatusActivePlayers
 ## OptionalDeps: Lib-ScrollingTable
 

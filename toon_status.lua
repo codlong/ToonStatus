@@ -6,7 +6,7 @@ local addon_name, addon = ...
 --
 -- Set to true for debug chat messages
 --
-local _debug = false
+local _debug = true
 
 --
 -- Resources to track. 
@@ -15,31 +15,27 @@ local _debug = false
 local resourceNames = {
     ["level"] = "player_level",
     ["ilvl"] = "ilvl",
-    ["renown"] = "renown",
     ["gold"] = "copper",
-    ["soul_ash"] = "soul_ash",
-    ["anima"] = "anima",
-    ["stygia"] = "stygia",
-    ["adventure"] = "adventure"
+    ["supplies"] = "supplies",
+    ["overflow"] = "overflow",
+    ["sigil"] = "sigil"
 }
 
 -- Labels for display
 local resourceLabels = {
     ["level"] = "Level",
     ["ilvl"] = "iLvl",
-    ["renown"] = "Renown",
     ["gold"] = "Gold",
-    ["soul_ash"] = "Soul Ash",
-    ["anima"] = "Anima",
-    ["stygia"] = "Stygia",
-    ["adventure"] = "Adv Prog"
+    ["supplies"] = "DI Supplies",
+    ["overflow"] = "Ele Overflow",
+    ["sigil"] = "Storm Sigil"
 }
 
 -- Sort order
-local resourceOrder = {"level", "ilvl", "renown", "gold", "soul_ash", "anima", "stygia", "adventure"}
+local resourceOrder = {"level", "ilvl", "gold", "supplies", "overflow", "sigil"}
 
 -- Track totals across Toons
-local resourceTotals = {"gold", "soul_ash", "anima", "stygia"}
+local resourceTotals = {"gold"}
 
 local knownResources = {}
 for k, v in pairs(resourceNames) do
@@ -61,8 +57,8 @@ local toonEvents = {
 -- Create our main dialog frame
 --
 local frame  = CreateFrame("Frame", "ToonStatusFrame", UIParent,  BackdropTemplateMixin and "BackdropTemplate")
-frame.width  = 750
-frame.height = 450
+frame.width  = 600
+frame.height = 400
 frame:SetFrameStrata("FULLSCREEN_DIALOG")
 frame:SetSize(frame.width, frame.height)
 frame:SetPoint("CENTER", UIParent, "CENTER", 0, 0)
@@ -80,8 +76,6 @@ frame:EnableMouseWheel(true)
 
 -- Make movable/resizable
 frame:SetMovable(true)
-frame:SetResizable(enable)
-frame:SetMinResize(100, 100)
 frame:RegisterForDrag("LeftButton")
 frame:SetScript("OnDragStart", frame.StartMoving)
 frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
@@ -106,7 +100,7 @@ frame.closeButton = closeButton
 
 -- ScrollingMessageFrame
 local myfont = CreateFont("ToonStatusDialog")
-myfont:SetFont("Interface\\Addons\\toon_status\\FiraMono-Medium.ttf", 12)
+myfont:SetFont("Interface\\Addons\\toon_status\\FiraMono-Medium.ttf", 12, "")
 
 local messageFrame = CreateFrame("ScrollingMessageFrame", nil, frame)
 messageFrame:SetPoint("BOTTOM", 15, 50)
@@ -160,8 +154,6 @@ local function ShowHelpMessage()
     TS_ChatMessage(
         "/ts update to update current player data without displaying anything. Can be used in a macro with /logout to save before exit.")
     TS_ChatMessage("To sort data, simply click on the column header in the table.")
-    TS_ChatMessage(
-        "Adventure Campaign Progress (Adv Prog) is a new 'currency' that allows you to get better follower missions, and is now tracked.")
     TS_ChatMessage("/ts help to display this information")
 end
 
@@ -195,12 +187,12 @@ local function GetPlayerData()
         currency_name = currency_info["name"]
         count = currency_info["quantity"]
         if _debug then TS_ChatMessage("Currency ".. nvl(currency_name, unknown)) end
-        if currency_name == "Soul Ash" then
-            player_data.soul_ash = count
-        elseif currency_name == "Reservoir Anima" then
-            player_data.anima = count
-        elseif currency_name == "Stygia" then
-            player_data.stygia = count
+        if currency_name == "Dragon Isles Supplies" then
+            player_data.supplies = count
+        elseif currency_name == "Elemental Overflow" then
+            player_data.overflow = count
+        elseif currency_name == "Storm Sigil" then
+            player_data.sigil = count
         end
     end
 
@@ -302,9 +294,6 @@ function round(val, decimal)
 --
 local function StatTotalsString(resources)
     local total_copper = 0
-    local total_soul_ash = 0
-    local total_anima = 0
-    local total_stygia = 0
 
     if (not resources) then
         resources = resourceTotals
@@ -312,24 +301,12 @@ local function StatTotalsString(resources)
     for player, stats in pairs(ToonStatus) do
         if (IsInList(player, ToonStatusActivePlayers)) then
             total_copper = total_copper + nvl(stats.copper, 0)
-            total_soul_ash = total_soul_ash + nvl(stats.soul_ash, 0)
-            total_anima = total_anima + nvl(stats.anima, 0)
-            total_stygia = total_stygia + nvl(stats.stygia, 0)
        end
     end
 
     ret = ""
     if (IsInList("gold", resources)) then
         ret = ret..("Gold: %27s\n"):format(comma_value(round(total_copper/10000, 0)))
-    end
-    if (IsInList("soul_ash", resources)) then
-        ret = ret..("Soul Ash: %24d\n"):format(total_soul_ash)
-    end
-    if (IsInList("anima", resources)) then
-        ret = ret..("Reservoir Anima: %12d\n"):format(total_anima)
-    end
-    if (IsInList("stygia", resources)) then
-        ret = ret..("Stygia: %28d\n"):format(total_stygia)
     end
 
     return ret
@@ -388,10 +365,7 @@ local function GetColumn(columnName, comparesort, sortnext)
             ["a"] = 0.0 
         }, 
         ["defaultsort"] = "dsc",
-        --["sortnext"]= 1,
-        --["comparesort"] = function (cella, cellb, columnName)
-        --end,
-        ["DoCellUpdate"] = nil,
+        ["DoCellUpdate"] = nil
     }
     if comparesort then
         retval["comparesort"] = comparesort
@@ -476,16 +450,14 @@ end
 -- Return a csv string for the given data
 --
 local function CharacterStatusCSVString(data)
-    return ("%s,%d,%d,%.0f,%d,%d,%d,%d,%d"):format(
+    return ("%s,%d,%d,%d,%d,%d,%d"):format(
         nvl(data.player_name, "UNKNOWN"), 
         nvl(data.player_level, 0),
-        nvl(data.renown, 0),
         nvl(data.copper, 0), 
-        nvl(data.soul_ash, 0),
-        nvl(data.anima, 0),
-        nvl(data.stygia, 0),
-        nvl(data.ilvl, 0),
-        nvl(data.adventure, 0)
+        nvl(data.supplies, 0),
+        nvl(data.overflow, 0),
+        nvl(data.sigil, 0),
+        nvl(data.ilvl, 0)
     )
 end
 
@@ -502,7 +474,7 @@ local function ShowPlayerDataCSV()
         OnShow = function (self, data)
             self.editBox:SetMultiLine()
             local now = date("%m/%d/%y %H:%M:%S",time())
-            self.editBox:Insert("player,player_level,renown,copper,soul_ash,anima,stygia,ilvl,adventure,timestamp\n")
+            self.editBox:Insert("player,player_level,copper,supplies,overflow,sigil,ilvl,timestamp\n")
             for i, player in ipairs(ToonStatusActivePlayers) do
             self.editBox:Insert(("%s,%s\n"):format(CharacterStatusCSVString(ToonStatus[player]), now))
             end
