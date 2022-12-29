@@ -6,7 +6,7 @@ local addon_name, addon = ...
 --
 -- Set to true for debug chat messages
 --
-local _debug = true
+local _debug = false
 
 --
 -- Resources to track. 
